@@ -1789,22 +1789,37 @@ async function ankiConnectPush() {
     (c.tags||[]).forEach(function(t){ tags.push(t); });
 
     var note;
+    var choices = Array.isArray(c.choices) ? c.choices : [];
+    var falseChoices = [choices[1], choices[2], choices[3]].filter(Boolean).join(' | ');
     if (c.cardType === 'mc') {
       note = {
         deckName: deckName,
-        modelName: 'Basic',
+        modelName: 'Memrise (Lτ) Preset [Translation+Listenting | MultipleChoice+Typing] v5.1',
         fields: {
-          Front: c.learnable || '',
-          Back: c.definition + (c.extra ? '\n\n' + c.extra : '') +
-                '\n\n<hr><small>' + (c.choices.slice(1).filter(Boolean).join(' · ')) + '</small>'
+          Learnable: c.learnable || '',
+          Definition: c.definition || '',
+          Choices: falseChoices,
+          Extra: c.extra || '',
+          'Extra 2': '',
+          Audio: '',
+          Mems: '',
+          Attributes: ''
         },
         tags: tags
       };
     } else if (c.cardType === 'cloze') {
       note = {
         deckName: deckName,
-        modelName: 'Cloze',
-        fields: { Text: c.clozeText || '' },
+        modelName: 'Memrise (Lτ) Cloze Template v5.1',
+        fields: {
+          Text: c.clozeText || '',
+          Choices: falseChoices,
+          Extra: '',
+          'Extra 2': '',
+          Audio: '',
+          Mems: '',
+          Attributes: ''
+        },
         tags: tags
       };
     }

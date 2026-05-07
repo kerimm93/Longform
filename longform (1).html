@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Longform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --bg:        #0e0e0e;
+  --bg-mid:    #141414;
+  --surface:   #1a1a1a;
+  --surface-2: #202020;
+  --surface-3: #272727;
+  --border:    #2e2e2e;
+  --border-hi: #444;
+  --ink:       #e8e4dc;
+  --ink-mid:   #8a8680;
+  --ink-dim:   #48453f;
+  --amber:     #d4a843;
+  --amber-dim: #7a5f22;
+  --amber-glow:rgba(212,168,67,0.12);
+  --teal:      #4a9e8e;
+  --teal-bg:   rgba(74,158,142,0.1);
+  --rose:      #b85c5c;
+  --rose-bg:   rgba(184,92,92,0.1);
+  --slate:     #6a82a0;
+  --slate-bg:  rgba(106,130,160,0.1);
+  --sage:      #7a9e72;
+  --sage-bg:   rgba(122,158,114,0.1);
+  --display: 'Playfair Display', Georgia, serif;
+  --body:    'Source Sans 3', sans-serif;
+  --mono:    'IBM Plex Mono', monospace;
+  --r: 4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.6;
+  min-height:100vh;
+}
+
+/* ── LAYOUT ── */
+#app{max-width:1060px;margin:0 auto;padding:16px 14px 100px}
+
+/* ── HEADER ── */
+.app-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 0 10px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:18px;
+  gap:12px;
+}
+.app-wordmark{
+  font-family:var(--display);
+  font-weight:900;
+  font-size:22px;
+  color:var(--amber);
+  letter-spacing:-0.5px;
+}
+.app-wordmark span{color:var(--ink-mid);font-weight:400}
+.header-right{display:flex;align-items:center;gap:10px}
+.hamburger-btn{background:transparent;border:1px solid var(--border);color:var(--ink-mid);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:17px;display:none}
+
+/* ── TABS ── */
+.tab-nav{
+  display:flex;gap:2px;margin-bottom:18px;
+  border-bottom:1px solid var(--border);
+}
+.tab-btn{
+  font-family:var(--body);font-weight:600;font-size:12px;
+  padding:8px 14px;border:none;border-bottom:2px solid transparent;
+  cursor:pointer;background:transparent;
+  color:var(--ink-mid);transition:all .15s;
+  white-space:nowrap;
+  margin-bottom:-1px;
+}
+.tab-btn:hover{color:var(--ink)}
+.tab-btn.active{color:var(--amber);border-bottom-color:var(--amber)}
+.tab-btn .tb-icon{margin-right:5px}
+
+/* ── MOBILE SIDEBAR ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100}
+.sidebar-overlay.open{display:block}
+.sidebar{
+  position:fixed;top:0;left:-260px;width:240px;height:100vh;
+  background:var(--bg-mid);border-right:1px solid var(--border);
+  z-index:101;transition:left .2s;padding:18px 12px;overflow-y:auto;
+}
+.sidebar.open{left:0}
+.sidebar .tab-btn{display:flex;width:100%;text-align:left;padding:11px 12px;font-size:13px;margin-bottom:1px;border-bottom:none;border-radius:var(--r)}
+.sidebar .tab-btn.active{background:var(--amber-glow);color:var(--amber);border-bottom:none}
+.sidebar-close{float:right;background:transparent;border:none;color:var(--ink-mid);font-size:20px;cursor:pointer}
+
+/* ── CARDS / SURFACES ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px 18px;
+  margin-bottom:12px;
+}
+.card-title{
+  font-family:var(--body);font-weight:700;font-size:11px;
+  color:var(--amber);text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.card-title .ct-actions{margin-left:auto;display:flex;gap:6px}
+
+/* ── SOURCE CARDS (primary view) ── */
+.source-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:0;
+  margin-bottom:10px;
+  overflow:hidden;
+  cursor:pointer;
+  transition:border-color .15s;
+}
+.source-card:hover{border-color:var(--border-hi)}
+.source-card.active-source{border-color:var(--amber)}
+.source-card-header{
+  padding:14px 16px;
+  display:flex;align-items:flex-start;gap:12px;
+}
+.source-type-badge{
+  font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:3px 7px;border-radius:2px;
+  flex-shrink:0;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;
+}
+.type-book{background:rgba(212,168,67,0.15);border:1px solid var(--amber-dim);color:var(--amber)}
+.type-article{background:var(--teal-bg);border:1px solid rgba(74,158,142,0.3);color:var(--teal)}
+.type-video{background:var(--rose-bg);border:1px solid rgba(184,92,92,0.3);color:var(--rose)}
+.source-main{flex:1;min-width:0}
+.source-title{font-family:var(--display);font-weight:700;font-size:16px;line-height:1.3;margin-bottom:3px}
+.source-author{font-size:12px;color:var(--ink-mid);margin-bottom:6px}
+.source-meta{font-size:11px;color:var(--ink-dim);font-family:var(--mono)}
+.source-actions{display:flex;gap:5px;flex-shrink:0}
+
+/* ── PROGRESS BAR ── */
+.prog-wrap{padding:0 16px 14px}
+.prog-label{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--ink-dim);margin-bottom:5px}
+.prog-bar{height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width .4s;background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+.prog-fill.complete{background:linear-gradient(90deg,var(--sage),var(--teal))}
+
+/* ── SECTION LIST ── */
+.section-list{border-top:1px solid var(--border)}
+.section-row{
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:10px;
+}
+.section-row:last-child{border-bottom:none}
+.section-num{
+  font-family:var(--mono);font-size:10px;color:var(--ink-dim);
+  flex-shrink:0;width:24px;text-align:right;padding-top:2px;
+}
+.section-main{flex:1;min-width:0}
+.section-name{font-size:13px;font-weight:600;margin-bottom:5px}
+.section-range{font-family:var(--mono);font-size:10px;color:var(--ink-mid);margin-bottom:6px}
+.step-grid{display:flex;flex-wrap:wrap;gap:4px}
+.step-chip{
+  font-size:9px;font-family:var(--mono);font-weight:600;
+  padding:3px 7px;border-radius:2px;cursor:pointer;
+  border:1px solid var(--border);
+  color:var(--ink-dim);background:transparent;
+  transition:all .12s;user-select:none;
+  text-transform:uppercase;letter-spacing:0.3px;
+}
+.step-chip.done{background:var(--sage-bg);border-color:rgba(122,158,114,0.4);color:var(--sage)}
+.step-chip:hover:not(.done){border-color:var(--border-hi);color:var(--ink-mid)}
+
+/* ── BUTTONS ── */
+.btn{
+  font-family:var(--body);font-weight:700;font-size:12px;
+  padding:8px 14px;border:none;border-radius:var(--r);cursor:pointer;
+  min-height:34px;display:inline-flex;align-items:center;gap:5px;
+  transition:all .14s;
+}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-amber{background:var(--amber);color:#0e0e0e;font-weight:800}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--ink-mid)}
+.btn-ghost:hover{border-color:var(--border-hi);color:var(--ink)}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-danger{background:transparent;border:1px solid var(--rose);color:var(--rose)}
+.btn-danger:hover{background:var(--rose-bg)}
+.btn-sm{font-size:11px;padding:5px 10px;min-height:28px}
+
+/* ── FORMS ── */
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:10px;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;font-family:var(--mono)}
+input,textarea,select{
+  width:100%;background:var(--surface-3);
+  border:1px solid var(--border);border-radius:var(--r);
+  color:var(--ink);font-family:var(--body);font-size:14px;
+  padding:8px 11px;outline:none;transition:border .15s;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
+textarea{resize:vertical;min-height:80px}
+select option{background:var(--surface)}
+.form-hint{font-size:10px;color:var(--ink-dim);margin-top:4px;font-family:var(--mono)}
+
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:600px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* ── MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.8);z-index:200;
+  align-items:center;justify-content:center;padding:14px;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--bg-mid);border:1px solid var(--border-hi);
+  border-radius:var(--r);padding:20px;
+  width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
+  box-shadow:0 12px 48px rgba(0,0,0,0.7);
+}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-family:var(--display);font-weight:700;font-size:18px}
+.modal-close{background:transparent;border:none;color:var(--ink-mid);font-size:22px;cursor:pointer}
+
+/* ── NOTICES ── */
+.notice{border-radius:var(--r);padding:9px 12px;font-size:12px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start;font-family:var(--mono)}
+.notice-info{background:var(--slate-bg);border:1px solid rgba(106,130,160,0.3);color:var(--slate)}
+.notice-warn{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.25);color:var(--amber)}
+.notice-ok{background:var(--sage-bg);border:1px solid rgba(122,158,114,0.3);color:var(--sage)}
+.notice-err{background:var(--rose-bg);border:1px solid rgba(184,92,92,0.3);color:var(--rose)}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:999;pointer-events:none}
+.toast-msg{
+  background:var(--surface-3);border:1px solid var(--border-hi);
+  padding:9px 14px;border-radius:var(--r);font-size:11px;font-family:var(--mono);font-weight:600;
+  margin-top:5px;opacity:0;transform:translateY(6px);
+  transition:all .18s;box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+.toast-msg.show{opacity:1;transform:translateY(0)}
+.toast-msg.ok{border-color:rgba(122,158,114,0.5);color:var(--sage)}
+.toast-msg.err{border-color:rgba(184,92,92,0.5);color:var(--rose)}
+
+/* ── STATUS PILLS ── */
+.pill{
+  display:inline-block;font-size:9px;font-weight:600;font-family:var(--mono);
+  padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:0.4px;
+}
+.pill-raw{background:var(--rose-bg);border:1px solid rgba(184,92,92,0.3);color:var(--rose)}
+.pill-cleaned{background:var(--slate-bg);border:1px solid rgba(106,130,160,0.3);color:var(--slate)}
+.pill-processed{background:var(--sage-bg);border:1px solid rgba(122,158,114,0.3);color:var(--sage)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--ink-dim);font-size:13px}
+.empty-icon{font-size:32px;margin-bottom:12px;opacity:0.4}
+
+/* ── PROMPT BOX ── */
+.prompt-box{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px}
+.prompt-box-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.prompt-title{font-weight:700;font-size:13px}
+.prompt-meta{font-size:10px;color:var(--ink-mid);margin-top:2px;font-family:var(--mono)}
+.prompt-text{font-size:11px;color:var(--ink-mid);line-height:1.6;white-space:pre-wrap;max-height:130px;overflow-y:auto;background:var(--surface);border-radius:2px;padding:8px;border:1px solid var(--border);font-family:var(--mono)}
+
+/* ── SYNC DOT ── */
+.sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+.sync-ok{background:var(--sage)}
+.sync-busy{background:var(--amber);animation:pulse .8s infinite}
+.sync-err{background:var(--rose)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── REVIEW BADGE ── */
+.rev-badge{background:var(--rose);color:#fff;font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:10px;margin-left:4px;display:none}
+
+/* ── DIVIDER ── */
+hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+/* ── TOC IMPORT BLOCK ── */
+.toc-prompt-block{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:12px}
+.toc-prompt-text{font-family:var(--mono);font-size:11px;color:var(--ink-mid);line-height:1.6;white-space:pre-wrap;max-height:160px;overflow-y:auto}
+
+/* ── SECTION GENERATOR ── */
+.gen-option{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;cursor:pointer;margin-bottom:6px;transition:border-color .14s;
+}
+.gen-option:hover{border-color:var(--amber-dim)}
+.gen-option.selected{border-color:var(--amber);background:var(--amber-glow)}
+.gen-option-title{font-weight:700;font-size:13px;margin-bottom:2px}
+.gen-option-desc{font-size:11px;color:var(--ink-mid);font-family:var(--mono)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+
+/* ── MOBILE ── */
+@media(max-width:640px){
+  .tab-nav{display:none}
+  .hamburger-btn{display:flex}
+  .app-wordmark{font-size:18px}
+  .source-title{font-size:14px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .modal{max-width:100%}
+  .source-actions{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-wordmark">longform<span>.</span></div>
+    <div class="header-right">
+      <span style="font-size:10px;font-family:var(--mono);color:var(--ink-dim)">
+        <span class="sync-dot sync-ok" id="syncDot"></span><span id="syncLabel">lokal</span>
+      </span>
+      <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+  </div>
+
+  <!-- DESKTOP TABS -->
+  <div class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="quellen" onclick="switchTab('quellen')"><span class="tb-icon">📖</span>Quellen</button>
+    <button class="tab-btn" data-tab="projekte" onclick="switchTab('projekte')"><span class="tb-icon">🗂</span>Projekte</button>
+    <button class="tab-btn" data-tab="sessions" onclick="switchTab('sessions')"><span class="tb-icon">🔬</span>Sessions</button>
+    <button class="tab-btn" data-tab="flashcards" onclick="switchTab('flashcards')"><span class="tb-icon">🃏</span>Flashcards<span class="rev-badge" id="revBadge">0</span></button>
+    <button class="tab-btn" data-tab="export" onclick="switchTab('export')"><span class="tb-icon">📤</span>Export</button>
+    <button class="tab-btn" data-tab="prompts" onclick="switchTab('prompts')"><span class="tb-icon">💬</span>Prompts</button>
+    <button class="tab-btn" data-tab="einstellungen" onclick="switchTab('einstellungen')"><span class="tb-icon">⚙️</span>Einstellungen</button>
+  </div>
+
+  <!-- MOBILE SIDEBAR -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+    <div style="margin-top:20px">
+      <button class="tab-btn" data-stab="quellen" onclick="switchTab('quellen');closeSidebar()"><span class="tb-icon">📖</span>Quellen</button>
+      <button class="tab-btn" data-stab="projekte" onclick="switchTab('projekte');closeSidebar()"><span class="tb-icon">🗂</span>Projekte</button>
+      <button class="tab-btn" data-stab="sessions" onclick="switchTab('sessions');closeSidebar()"><span class="tb-icon">🔬</span>Sessions</button>
+      <button class="tab-btn" data-stab="flashcards" onclick="switchTab('flashcards');closeSidebar()"><span class="tb-icon">🃏</span>Flashcards</button>
+      <button class="tab-btn" data-stab="export" onclick="switchTab('export');closeSidebar()"><span class="tb-icon">📤</span>Export</button>
+      <button class="tab-btn" data-stab="prompts" onclick="switchTab('prompts');closeSidebar()"><span class="tb-icon">💬</span>Prompts</button>
+      <button class="tab-btn" data-stab="einstellungen" onclick="switchTab('einstellungen');closeSidebar()"><span class="tb-icon">⚙️</span>Einstellungen</button>
+    </div>
+  </div>
+
+  <!-- TAB CONTENT -->
+  <div id="tab-quellen" class="tab-content"></div>
+  <div id="tab-projekte" class="tab-content" style="display:none"></div>
+  <div id="tab-sessions" class="tab-content" style="display:none"></div>
+  <div id="tab-flashcards" class="tab-content" style="display:none"></div>
+  <div id="tab-export" class="tab-content" style="display:none"></div>
+  <div id="tab-prompts" class="tab-content" style="display:none"></div>
+  <div id="tab-einstellungen" class="tab-content" style="display:none"></div>
+
+</div>
+<div id="toast"></div>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- SOURCE MODAL -->
+<div class="modal-overlay" id="modalSource">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title" id="modalSourceTitle">Neue Quelle</div>
+      <button class="modal-close" onclick="closeModal('modalSource')">✕</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label>Typ</label>
+        <select id="srcType" onchange="toggleSourceFields()">
+          <option value="book">📚 Buch</option>
+          <option value="article">📄 Artikel</option>
+          <option value="video">🎥 Video / Vortrag</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Projekt (optional)</label>
+        <select id="srcProject"><option value="">— kein Projekt —</option></select>
+      </div>
+    </div>
+    <div class="form-row"><label>Titel *</label><input type="text" id="srcTitle" placeholder="Titel der Quelle"></div>
+    <div class="form-row"><label>Autor / Kanal</label><input type="text" id="srcAuthor" placeholder="Autor, Herausgeber oder Kanal"></div>
+    <div class="form-row"><label>URL / ISBN (optional)</label><input type="text" id="srcUrl" placeholder="https://... oder ISBN"></div>
+    <div id="srcBookFields">
+      <div class="grid-2">
+        <div class="form-row"><label>Gesamtseiten</label><input type="number" id="srcPages" placeholder="z.B. 320" min="1"></div>
+        <div class="form-row"><label>Startseite</label><input type="number" id="srcPageStart" placeholder="1" min="1" value="1"></div>
+      </div>
+    </div>
+    <div id="srcVideoFields" style="display:none">
+      <div class="form-row"><label>Gesamtdauer (Minuten)</label><input type="number" id="srcDuration" placeholder="z.B. 240" min="1"></div>
+    </div>
+    <div class="form-row"><label>Notizen</label><textarea id="srcNotes" rows="2" placeholder="Kontext, Beschreibung..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalSource')">Abbrechen</button>
+      <button class="btn btn-amber" onclick="saveSource()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION GENERATOR MODAL -->
+<div class="modal-overlay" id="modalSections">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <div class="modal-title">Abschnitte definieren</div>
+      <button class="modal-close" onclick="closeModal('modalSections')">✕</button>
+    </div>
+    <div class="notice notice-info">Wähle eine Methode oder kombiniere beide.</div>
+
+    <div style="margin-bottom:14px">
+      <div class="gen-option" id="genOptEqual" onclick="selectGenMethod('equal')">
+        <div class="gen-option-title">⚖️ Gleichmäßige Aufteilung</div>
+        <div class="gen-option-desc">App teilt automatisch in gleich große Abschnitte auf</div>
+      </div>
+      <div class="gen-option" id="genOptToc" onclick="selectGenMethod('toc')">
+        <div class="gen-option-title">📋 Inhaltsverzeichnis importieren</div>
+        <div class="gen-option-desc">HITL: Foto → ChatGPT-Prompt → Ergebnis zurückpasten — oder manuell eingeben</div>
+      </div>
+      <div class="gen-option" id="genOptManual" onclick="selectGenMethod('manual')">
+        <div class="gen-option-title">✏️ Manuell eingeben</div>
+        <div class="gen-option-desc">Abschnitte direkt eingeben</div>
+      </div>
+    </div>
+
+    <!-- Equal split options -->
+    <div id="genEqualFields" style="display:none">
+      <div class="grid-2">
+        <div class="form-row"><label>Anzahl Abschnitte</label><input type="number" id="genCount" placeholder="z.B. 10" min="1" max="100" value="10"></div>
+        <div class="form-row"><label>Einheit</label><select id="genUnit"><option value="pages">Seiten</option><option value="minutes">Minuten</option><option value="percent">Prozent</option></select></div>
+      </div>
+      <button class="btn btn-amber" onclick="generateEqualSections()">Abschnitte generieren</button>
+    </div>
+
+    <!-- TOC import -->
+    <div id="genTocFields" style="display:none">
+      <div class="toc-prompt-block">
+        <div style="font-size:10px;font-weight:700;color:var(--amber);font-family:var(--mono);margin-bottom:6px">CHATGPT-PROMPT (kopieren)</div>
+        <div class="toc-prompt-text" id="tocPromptText"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyTocPrompt()">📋 Kopieren</button>
+      </div>
+      <div class="form-row">
+        <label>ChatGPT-Ergebnis einfügen (JSON)</label>
+        <textarea id="tocResult" rows="7" placeholder='[{"title":"Kapitel 1","start":"S. 1","end":"S. 24"},...]'></textarea>
+      </div>
+      <button class="btn btn-teal" onclick="importTocResult()">Importieren</button>
+    </div>
+
+    <!-- Manual entry -->
+    <div id="genManualFields" style="display:none">
+      <div class="form-row">
+        <label>Abschnitte (eine Zeile pro Abschnitt)</label>
+        <textarea id="manualSections" rows="8" placeholder="Kapitel 1: Einführung [S. 1–24]&#10;Kapitel 2: Grundlagen [S. 25–60]&#10;..."></textarea>
+      </div>
+      <div class="form-hint" style="margin-bottom:10px">Format: Titel [Seite/Zeit/Prozent] — Bereich in Klammern optional</div>
+      <button class="btn btn-amber" onclick="importManualSections()">Abschnitte übernehmen</button>
+    </div>
+
+    <!-- Preview -->
+    <div id="sectionPreview" style="display:none;margin-top:14px">
+      <div class="card-title">Vorschau</div>
+      <div id="sectionPreviewList"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" onclick="closeModal('modalSections')">Verwerfen</button>
+        <button class="btn btn-amber" onclick="confirmSections()">Abschnitte speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="modalProject">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalProjectTitle">Neues Projekt</div>
+      <button class="modal-close" onclick="closeModal('modalProject')">✕</button>
+    </div>
+    <div class="form-row"><label>Name *</label><input type="text" id="mpName" placeholder="Projektname"></div>
+    <div class="form-row">
+      <label>Kontext-Typ</label>
+      <select id="mpContextType">
+        <option value="single_book">Einzelnes Buch</option>
+        <option value="book_chapters">Buch mit Kapiteln als Einzelquellen</option>
+        <option value="multi_source">Mehrere Quellen / Themenkontext</option>
+        <option value="custom">Sonstiges</option>
+      </select>
+    </div>
+    <div class="form-row"><label>NotebookLM-Notebook-URL (optional)</label><input type="url" id="mpNlmUrl" placeholder="https://notebooklm.google.com/..."></div>
+    <div class="form-row"><label>Beschreibung</label><textarea id="mpDesc" rows="2" placeholder="Beschreibung..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalProject')">Abbrechen</button>
+      <button class="btn btn-amber" onclick="saveProject()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION MODAL -->
+<div class="modal-overlay" id="modalSession">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <div class="modal-title" id="modalSessionTitle">Neue Session</div>
+      <button class="modal-close" onclick="closeModal('modalSession')">✕</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label>Typ</label>
+        <select id="msType">
+          <option value="audio_summary">🎧 Audio-Summary</option>
+          <option value="mindmap">🗺️ Mindmap</option>
+          <option value="qa_session">❓ Q&A Session</option>
+          <option value="quiz">📝 Quiz</option>
+          <option value="flashcards">🃏 Flashcard-Gen</option>
+          <option value="pdf_cleanup">🧹 PDF-Bereinigung</option>
+          <option value="custom">✨ Custom</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Quelle (optional)</label>
+        <select id="msSource"><option value="">— keine —</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Abschnitt (optional)</label>
+      <select id="msSection"><option value="">— ganze Quelle —</option></select>
+    </div>
+    <div class="form-row"><label>Verwendeter Prompt</label><input type="text" id="msPrompt" placeholder="Welcher Prompt wurde genutzt?"></div>
+    <div class="form-row">
+      <label>Raw Output (einfügen)</label>
+      <textarea id="msRaw" rows="7" placeholder="Output hier einfügen..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalSession')">Abbrechen</button>
+      <button class="btn btn-amber" onclick="saveSession()">Als RAW speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAN MODAL -->
+<div class="modal-overlay" id="modalClean">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <div class="modal-title">Session bereinigen</div>
+      <button class="modal-close" onclick="closeModal('modalClean')">✕</button>
+    </div>
+    <div class="notice notice-info">Kopiere den Prompt, füge ihn mit dem Raw-Output in Claude/ChatGPT ein, paste das Ergebnis zurück.</div>
+    <div class="form-row">
+      <label>Bereinigungsprompt</label>
+      <div class="prompt-text" id="cleanPromptText" style="max-height:160px"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="copyCleanPrompt()">📋 Kopieren</button>
+    </div>
+    <div class="form-row">
+      <label>Bereinigtes Ergebnis</label>
+      <textarea id="cleanResult" rows="7" placeholder="Bereinigten Output hier einfügen..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalClean')">Abbrechen</button>
+      <button class="btn btn-teal" onclick="saveCleanResult()">Als CLEANED speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLASHCARD MODAL -->
+<div class="modal-overlay" id="modalFlashcard">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalFCTitle">Neue Flashcard</div>
+      <button class="modal-close" onclick="closeModal('modalFlashcard')">✕</button>
+    </div>
+    <div class="form-row">
+      <label>Typ</label>
+      <select id="fcType" onchange="toggleFCFields()">
+        <option value="mc">Multiple Choice (MC)</option>
+        <option value="cloze">Lückentext (Cloze)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Quelle (optional)</label>
+      <select id="fcSource"><option value="">— keine —</option></select>
+    </div>
+    <div id="fcMCFields">
+      <div class="form-row"><label>Vorderseite / Frage *</label><input type="text" id="fcLearnable" placeholder="Begriff oder Frage"></div>
+      <div class="form-row"><label>Richtige Antwort *</label><input type="text" id="fcDef" placeholder="Richtige Antwort [choices[0]]"></div>
+      <div class="form-row"><label>Falsche Option 2</label><input type="text" id="fcC2"></div>
+      <div class="form-row"><label>Falsche Option 3</label><input type="text" id="fcC3"></div>
+      <div class="form-row"><label>Falsche Option 4</label><input type="text" id="fcC4"></div>
+      <div class="form-row"><label>Extra (optional)</label><input type="text" id="fcExtra"></div>
+    </div>
+    <div id="fcClozeFields" style="display:none">
+      <div class="form-row"><label>Cloze-Text *</label><textarea id="fcCloze" rows="3" placeholder="Die {{c1::CPU}} ist das Gehirn des Computers."></textarea></div>
+      <div class="form-row"><label>Richtige Antwort (c1)</label><input type="text" id="fcClozeAns"></div>
+      <div class="form-row"><label>Falsche Option 2</label><input type="text" id="fcClozeC2"></div>
+      <div class="form-row"><label>Falsche Option 3</label><input type="text" id="fcClozeC3"></div>
+      <div class="form-row"><label>Falsche Option 4</label><input type="text" id="fcClozeC4"></div>
+    </div>
+    <div class="form-row"><label>Tags (Leerzeichen-getrennt)</label><input type="text" id="fcTags" placeholder="AP1 AP1::Thema::Netzwerk"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalFlashcard')">Abbrechen</button>
+      <button class="btn btn-amber" onclick="saveFlashcard()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROMPT MODAL -->
+<div class="modal-overlay" id="modalPrompt">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalPromptTitle">Neuer Prompt</div>
+      <button class="modal-close" onclick="closeModal('modalPrompt')">✕</button>
+    </div>
+    <div class="form-row"><label>Titel *</label><input type="text" id="ppTitle"></div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label>Phase</label>
+        <select id="ppPhase">
+          <option value="">— phasenunabhängig —</option>
+          <option value="1">Phase 1 — Exploration</option>
+          <option value="2">Phase 2 — Elaboration</option>
+          <option value="3">Phase 3 — Konsolidierung</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Session-Typ</label>
+        <select id="ppSessionType">
+          <option value="audio_summary">Audio-Summary</option>
+          <option value="mindmap">Mindmap</option>
+          <option value="qa_session">Q&A Session</option>
+          <option value="quiz">Quiz</option>
+          <option value="flashcards">Flashcards</option>
+          <option value="cleanup">Bereinigung</option>
+          <option value="pdf_cleanup">PDF-Bereinigung</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Prompt-Text *</label><textarea id="ppText" rows="7"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modalPrompt')">Abbrechen</button>
+      <button class="btn btn-amber" onclick="savePrompt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════
+var LKEY           = 'longform_v1';
+var GIST_TOKEN_KEY = 'longform_gist_token';
+var GIST_ID_KEY    = 'longform_gist_id';
+var GIST_FILE      = 'longform_data.json';
+
+var STEPS = [
+  {id:'scanned',      label:'Gescannt'},
+  {id:'pdf_cleaned',  label:'PDF bereinigt'},
+  {id:'nlm_imported', label:'NLM importiert'},
+  {id:'audio_done',   label:'Audio-Summary'},
+  {id:'flashcards',   label:'Flashcards'},
+  {id:'read',         label:'Gelesen'},
+  {id:'listened',     label:'Angehört'},
+  {id:'notes_done',   label:'Notizen verarbeitet'}
+];
+
+var TYPE_LABELS = {book:'Buch', article:'Artikel', video:'Video'};
+var SESSION_LABELS = {audio_summary:'Audio-Summary', mindmap:'Mindmap', qa_session:'Q&A', quiz:'Quiz', flashcards:'Flashcards', pdf_cleanup:'PDF-Bereinigung', custom:'Custom'};
+var CTX_LABELS = {single_book:'Einzelnes Buch', book_chapters:'Buch + Kapitel', multi_source:'Multi-Quellen', custom:'Sonstiges'};
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+var S = {
+  _lastExported: '',
+  activeSourceId: null,
+  sources:  [],   // Longform sources (books/articles/videos)
+  sections: [],   // Sections per source
+  projects: [],   // NotebookLM project contexts
+  sessions: [],   // NLM sessions
+  cards:    [],   // Flashcards (SRS)
+  prompts:  [],   // Custom prompts
+  config: { tagNamespace:'AP1' }
+};
+
+var _editingId         = null;
+var _activeSrcId       = null;   // for section modal
+var _cleaningSessionId = null;
+var _pendingSections   = [];
+var _genMethod         = null;
+var _syncTimer         = null;
+var _reviewMode        = false;
+var _reviewQueue       = [];
+var _reviewIndex       = 0;
+var _reviewAnswered    = false;
+
+// ═══════════════════════════════════════════════
+// SYSTEM PROMPTS
+// ═══════════════════════════════════════════════
+var SYSTEM_PROMPTS = [
+  {id:'sys_p1_audio', title:'Priming-Zusammenfassung', phase:1, type:'system', sessionType:'audio_summary',
+   promptText:'Erstelle eine strukturierte Zusammenfassung dieses Inhalts.\nGliederung:\n1. Kernkonzepte (5–8 Stichpunkte)\n2. Wichtigste Zusammenhänge\n3. Offene Fragen / was ich noch nicht verstehe\n\nMax. 500 Wörter. Ich will ein erstes mentales Modell aufbauen, keine vollständige Analyse.'},
+  {id:'sys_p1_mindmap', title:'Konzept-Hierarchie', phase:1, type:'system', sessionType:'mindmap',
+   promptText:'Erstelle eine Konzept-Hierarchie (Mindmap-Struktur).\n## [Hauptthema]\n- **[Unterthema 1]**\n  - Konzept A\n  - Konzept B\nNur Kernkonzepte, kein Fließtext. Max. 3 Ebenen.'},
+  {id:'sys_p2_qa', title:'Sokratischer Tutor', phase:2, type:'system', sessionType:'qa_session',
+   promptText:'Agiere als sokratischer Tutor.\n1. Stelle mir 3 Fragen zu Kernkonzepten\n2. Warte auf meine Antwort\n3. Gib präzises Feedback: Was ist richtig? Was fehlt? Was ist falsch?\n4. Vertiefe mit einer Folge-Frage\nKein Lob. Direkte Korrekturen.'},
+  {id:'sys_p2_qa2', title:'Elaboratives Fragen', phase:2, type:'system', sessionType:'qa_session',
+   promptText:'Stelle mir 5 Fragen:\n- 2x "Warum ist das so?" (Kausal)\n- 2x "Was wäre wenn...?" (Transfer)\n- 1x "Erkläre XY mit eigenen Worten"\nNach meinen Antworten: Feedback + Lücken benennen.'},
+  {id:'sys_p3_quiz', title:'Interleaved Quiz', phase:3, type:'system', sessionType:'quiz',
+   promptText:'Erstelle ein Quiz mit 10 MC-Fragen.\nFormat:\n### Frage [N]\n[Frage]\nA) ...\nB) ...\nC) ...\nD) ...\nAm Ende: Antwort-Schlüssel + kurze Begründung.'},
+  {id:'sys_p3_flash', title:'Flashcard-Generierung', phase:3, type:'system', sessionType:'flashcards',
+   promptText:'Generiere 10 Lernkarten.\nFormat:\n### Karte [N]\nF: [Frage oder Begriff]\nA: [Antwort / Definition]\nNur Wesentliches — präzise Definitionen.'},
+  {id:'sys_cleanup', title:'Bereinigungsprompt (NLM)', phase:null, type:'system', sessionType:'cleanup',
+   promptText:'Du bekommst einen rohen NotebookLM-Output.\nRegeln:\n- Entferne Formatierungsfehler, doppelte Leerzeilen, abgeschnittene Sätze\n- Bewahre alle Informationen vollständig\n- Strukturiere in klare Abschnitte mit Markdown-Überschriften\n- Für Flashcards: "F: ... / A: ..."\n- Gib NUR den bereinigten Text zurück\n\n=== RAW OUTPUT ===\n[rawOutput einfügen]'},
+  {id:'sys_pdf_clean', title:'PDF → Bereinigter Fließtext', phase:null, type:'system', sessionType:'pdf_cleanup',
+   promptText:'# PROMPT · PDF → Bereinigter Fließtext\n\nAUFGABE\nDu erhältst Text aus einem PDF (oft mit fehlerhaften Zeilenumbrüchen, Trennstrichen, OCR-Artefakten).\nBereinige den Text so, dass ein sauber lesbarer, logisch strukturierter Fließtext entsteht.\n\nZIEL: Natürlich lesbarer Text mit korrekten Absätzen, vollständigen Sätzen, konsistenter Formatierung, ohne PDF-/OCR-Störungen.\n\nREGELN:\n1. ZEILENUMBRÜCHE — nur nach vollständigen Sätzen oder Überschriften, nie mitten im Satz\n2. WORTTRENNUNGEN — Trennstriche am Zeilenende entfernen: "Strukturali-\\nsmus" → "Strukturalismus"\n3. ABSÄTZE — inhaltliche Absätze erhalten, nur bei klar erkennbarem Themenwechsel trennen\n4. ÜBERSCHRIFTEN — beibehalten, auf eigene Zeile, kein zusätzliches Markdown\n5. ZITATE — exakt beibehalten, sauber in Fließtext einbetten\n6. OCR-FEHLER — doppelte Leerzeichen entfernen, Zeichensatzfehler korrigieren\n7. KEINE INHALTLICHE VERÄNDERUNG — nicht zusammenfassen, nicht umformulieren, nur bereinigen\n8. AUSGABEFORMAT — gesamter bereinigter Text in einem Codeblock, keine Kommentare\n\nEINGABE\n<<<\n[Text hier einfügen]\n>>>\n\nAUSGABE\n→ sauber bereinigter Text gemäß aller Regeln'},
+  {id:'sys_audio_20min', title:'Audio-Summary: 20-Minuten Deep-Dive', phase:1, type:'system', sessionType:'audio_summary',
+   promptText:'🎙️ AUDIO-ZUSAMMENFASSUNG: 20-Minuten Deep-Dive\n\nBUCH: [BUCHTITEL, AUTOR]\nZiel: 15-20 Min Sprechzeit (ca. 2.500-2.800 Wörter)\n\nSTRUKTUR (8 Blöcke):\n[INTRO: 60s] Voranküdigung: Argumentationslinie, 5 Kernprinzipien, Gegenargumente, 5 Anwendungsschritte, 4 verwandte Werke\n[BLOCK 1: KERNAUSSAGE - 2min] 1 präziser Satz + Warum neu + Buchbeispiel + Denkänderung\n[BLOCK 2: BUCH-ARCHITEKTUR - 2min] Teil 1/2/3 je mit Fokus-Thema + wiederkehrendes Muster\n[BLOCK 3: 5 KERNPRINZIPIEN - 8min] Je Prinzip: Definition + Originalbeispiel + Formel/Template + Mechanismus\n[BLOCK 4: GEGENARGUMENTE - 2,5min] 3 Schwachstellen aus Original ableitbar + Autor-Antwort\n[BLOCK 5: ANWENDUNG - 3min] 30-Tage-Plan: Tag 1-3 / Woche 2 / Monat 1 je 3 Schritte + KPIs\n[BLOCK 6: VERKNÜPFUNGEN - 1,5min] 4 verwandte Bücher mit Verbindung/Unterschied\n[BLOCK 7: SPACED REPETITION - 1min] 3 Merkfragen für 2 Tage / 1 Woche / 1 Monat\n[OUTRO: 60s] 3-Bullet-Summary + 1 erster Schritt\n\nSTIL: Autoritär-begeistert | 145 Wörter/Min | Max 2.800 Wörter\nJEDES Prinzip = Originalbeispiel (mind. 2 Sätze) + Zitat | 9 konkrete Anwendungsschritte'},
+  {id:'sys_audio_10min', title:'Audio-Summary: 10-Minuten-Podcast', phase:1, type:'system', sessionType:'audio_summary',
+   promptText:'🎙️ AUDIO-ZUSAMMENFASSUNG: 10-Minuten-Podcast\n\nBUCH: [BUCHTITEL, AUTOR]\nZiel: 8-12 Min (ca. 1.200 Wörter)\n\nSTRUKTUR (6 Blöcke):\n[INTRO: 45s] Ankündigung: zentrale Idee, 3 Prinzipien, Anwendung\n[BLOCK 1: KERNAUSSAGE - 90s] 1-Satz-Kernaussage + Warum revolutionär + Buchbeispiel\n[BLOCK 2: 3 PRINZIPIEN - 4min] Je Prinzip: Bedeutung + Originalbeispiel + Formel\n[BLOCK 3: GEGENARGUMENTE - 90s] 2 Schwachstellen aus Original + Autor-Antwort\n[BLOCK 4: ANWENDUNG - 2min] Morgen / Nächste Woche / In 30 Tagen (je 1 konkreter Satz)\n[BLOCK 5: VERKNÜPFUNGEN - 60s] 2 verwandte Bücher mit Verbindung\n[OUTRO: 45s] 3-Bullet-Summary + 1 erster Schritt\n\nSTIL: Begeistert, glaubwürdig | 150 Wörter/Min | Max 1.200 Wörter'},
+  {id:'sys_lese_15min', title:'Buch-Zusammenfassung: 15 Min Lesezeit', phase:1, type:'system', sessionType:'audio_summary',
+   promptText:'📖 BUCH-ZUSAMMENFASSUNG: 15 Min Lesezeit\n\nBUCH: [BUCHTITEL VON AUTOR]\n\nSTRUKTUR (10 Sections):\n1️⃣ GROSSE THESE (120 Wörter) — Hauptthese + Warum neu + Buchbeleg + Auswirkung\n2️⃣ BUCH-ARCHITEKTUR (180 Wörter) — 3 Teile mit Thema/These + roter Faden\n3️⃣ 5 KERNPRINZIPIEN (800 Wörter) — Je: Definition + Beispiel (3-4 Sätze) + Mechanismus + Template\n4️⃣ KRITISCHE ANALYSE (250 Wörter) — 3 Schwachstellen aus Original + Antwort/Offenbleibendes\n5️⃣ 30-TAGE IMPLEMENTIERUNG (400 Wörter) — Phase 1/2/3 je 3 Schritte + KPI\n6️⃣ INTELLEKTUELLES NETZWERK (200 Wörter) — 4 Bücher mit Verbindungsrichtung\n7️⃣ BEHALTENS-SYSTEM (250 Wörter) — 3 Flashcard-Fragen + Spaced-Repetition-Plan\n8️⃣ ONE-PAGER (150 Wörter) — Problem / Lösung / Mach heute\n9️⃣ DATEN & EVIDENZ (150 Wörter) — Wichtigste Zahlen/Formeln\n🔟 QUALITÄTS-CHECK — Jedes Prinzip = Originalbeispiel + Zitat | 8 Anwendungsschritte | keine Spekulation\n\nGESAMTLÄNGE: 3.800-4.200 Zeichen | Markdown für Obsidian | Kurze Sätze | Fette Überschriften'}
+];
+
+// ═══════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+function save(){
+  S._lastExported = new Date().toISOString();
+  try{localStorage.setItem(LKEY,JSON.stringify(S))}catch(e){}
+  updateRevBadge();
+  scheduleSyncPush();
+}
+
+function load(){
+  try{var d=localStorage.getItem(LKEY);if(d){S=JSON.parse(d)}}catch(e){}
+  if(!S.sources)   S.sources=[];
+  if(!S.sections)  S.sections=[];
+  if(!S.projects)  S.projects=[];
+  if(!S.sessions)  S.sessions=[];
+  if(!S.cards)     S.cards=[];
+  if(!S.prompts)   S.prompts=[];
+  if(!S.config)    S.config={};
+  if(!S.config.tagNamespace) S.config.tagNamespace='AP1';
+  if(!S.config.ankiRootDeck) S.config.ankiRootDeck='Longform';
+  if(!S._lastExported) S._lastExported='';
+  if(!S.activeSourceId) S.activeSourceId=null;
+}
+
+// ═══════════════════════════════════════════════
+// SOURCE PROGRESS
+// ═══════════════════════════════════════════════
+function sourceProgress(srcId){
+  var sections = S.sections.filter(function(s){return s.sourceId===srcId});
+  if(!sections.length) return {pct:0,done:0,total:0,stepPct:{}};
+  var stepTotals={};
+  STEPS.forEach(function(s){stepTotals[s.id]=0});
+  sections.forEach(function(sec){
+    STEPS.forEach(function(st){
+      if(sec.steps && sec.steps[st.id]) stepTotals[st.id]++;
+    });
+  });
+  var totalSteps = sections.length * STEPS.length;
+  var doneSteps = STEPS.reduce(function(acc,st){return acc+stepTotals[st.id]},0);
+  var stepPct={};
+  STEPS.forEach(function(st){stepPct[st.id]=sections.length?Math.round(stepTotals[st.id]/sections.length*100):0});
+  return {
+    pct: totalSteps ? Math.round(doneSteps/totalSteps*100) : 0,
+    done: doneSteps,
+    total: totalSteps,
+    stepPct: stepPct,
+    sectionCount: sections.length
+  };
+}
+
+// ═══════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════
+var _activeTab='quellen';
+function switchTab(name){
+  _activeTab=name;
+  document.querySelectorAll('.tab-content').forEach(function(el){el.style.display='none'});
+  document.getElementById('tab-'+name).style.display='block';
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active',b.dataset.tab===name||b.dataset.stab===name);
+  });
+  renderTab(name);
+}
+function renderTab(name){
+  if(name==='quellen')      renderQuellen();
+  if(name==='projekte')     renderProjekte();
+  if(name==='sessions')     renderSessions();
+  if(name==='flashcards')   renderFlashcards();
+  if(name==='export')       renderExport();
+  if(name==='prompts')      renderPrompts();
+  if(name==='einstellungen') renderEinstellungen();
+}
+
+// ═══════════════════════════════════════════════
+// QUELLEN TAB
+// ═══════════════════════════════════════════════
+var _expandedSourceId = null;
+
+function renderQuellen(){
+  var el=document.getElementById('tab-quellen');
+  var active=S.sources.filter(function(s){return !s.archived});
+  var archived=S.sources.filter(function(s){return s.archived});
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  html+='<div style="font-family:var(--mono);font-size:10px;color:var(--ink-dim)">'+active.length+' QUELLEN</div>';
+  html+='<button class="btn btn-amber btn-sm" onclick="openModalSource()">+ Neue Quelle</button></div>';
+
+  if(!active.length){
+    html+='<div class="empty"><div class="empty-icon">📖</div>Noch keine Quellen.<br>Füge ein Buch, einen Artikel oder ein Video hinzu.</div>';
+  }else{
+    active.forEach(function(src){
+      var prog=sourceProgress(src.id);
+      var isExp=_expandedSourceId===src.id;
+      var projName='';
+      if(src.projectId){var p=S.projects.find(function(x){return x.id===src.projectId});if(p)projName=p.name}
+      var sections=S.sections.filter(function(s){return s.sourceId===src.id});
+
+      html+='<div class="source-card'+(isExp?' active-source':'')+'" >';
+      html+='<div class="source-card-header" onclick="toggleSourceExpand(\''+src.id+'\')">';
+      html+='<span class="source-type-badge type-'+src.type+'">'+TYPE_LABELS[src.type]+'</span>';
+      html+='<div class="source-main">';
+      html+='<div class="source-title">'+esc(src.title)+'</div>';
+      if(src.author) html+='<div class="source-author">'+esc(src.author)+'</div>';
+      html+='<div class="source-meta">';
+      if(src.pages) html+=src.pages+' S. · ';
+      if(src.duration) html+=src.duration+' Min · ';
+      html+=sections.length+' Abschnitte';
+      if(projName) html+=' · <span style="color:var(--amber-dim)">'+esc(projName)+'</span>';
+      html+='</div></div>';
+      html+='<div class="source-actions" onclick="event.stopPropagation()">';
+      html+='<button class="btn btn-ghost btn-sm" onclick="openSectionModal(\''+src.id+'\')">⊞ Abschnitte</button>';
+      html+='<button class="btn btn-ghost btn-sm" onclick="openModalSource(\''+src.id+'\')">✏️</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deleteSource(\''+src.id+'\')">🗑</button>';
+      html+='</div></div>';
+
+      // Progress bar
+      html+='<div class="prog-wrap">';
+      html+='<div class="prog-label"><span>Fortschritt</span><span>'+prog.pct+'%</span></div>';
+      html+='<div class="prog-bar"><div class="prog-fill'+(prog.pct===100?' complete':'')+'" style="width:'+prog.pct+'%"></div></div>';
+      html+='</div>';
+
+      // Expanded sections
+      if(isExp && sections.length){
+        html+='<div class="section-list">';
+        sections.forEach(function(sec,i){
+          html+='<div class="section-row">';
+          html+='<div class="section-num">'+(i+1)+'</div>';
+          html+='<div class="section-main">';
+          html+='<div class="section-name">'+esc(sec.title)+'</div>';
+          if(sec.range) html+='<div class="section-range">'+esc(sec.range)+'</div>';
+          html+='<div class="step-grid">';
+          STEPS.forEach(function(st){
+            var done=sec.steps&&sec.steps[st.id];
+            html+='<span class="step-chip'+(done?' done':'')+'" onclick="toggleStep(\''+sec.id+'\',\''+st.id+'\')">'+st.label+'</span>';
+          });
+          html+='</div></div>';
+          html+='<button class="btn btn-danger btn-sm" style="align-self:flex-start" onclick="deleteSection(\''+sec.id+'\')">🗑</button>';
+          html+='</div>';
+        });
+        html+='</div>';
+      }else if(isExp && !sections.length){
+        html+='<div style="padding:12px 16px;font-size:12px;color:var(--ink-dim);font-family:var(--mono)">Noch keine Abschnitte. Klicke "⊞ Abschnitte".</div>';
+      }
+
+      html+='</div>';
+    });
+  }
+
+  if(archived.length){
+    html+='<hr class="div"><div style="font-size:10px;font-family:var(--mono);color:var(--ink-dim);margin-bottom:8px">ARCHIVIERT ('+archived.length+')</div>';
+    archived.forEach(function(src){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;opacity:0.5">';
+      html+='<span class="source-type-badge type-'+src.type+'">'+TYPE_LABELS[src.type]+'</span>';
+      html+='<span style="flex:1;font-size:13px">'+esc(src.title)+'</span>';
+      html+='<button class="btn btn-ghost btn-sm" onclick="unarchiveSource(\''+src.id+'\')">↩</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deleteSource(\''+src.id+'\',true)">🗑</button>';
+      html+='</div>';
+    });
+  }
+
+  el.innerHTML=html;
+}
+
+function toggleSourceExpand(id){
+  _expandedSourceId=(_expandedSourceId===id)?null:id;
+  renderQuellen();
+}
+
+function toggleStep(sectionId,stepId){
+  var sec=S.sections.find(function(s){return s.id===sectionId});
+  if(!sec) return;
+  if(!sec.steps) sec.steps={};
+  sec.steps[stepId]=!sec.steps[stepId];
+  save();
+  renderQuellen();
+}
+
+function deleteSection(id){
+  S.sections=S.sections.filter(function(s){return s.id!==id});
+  save();renderQuellen();
+}
+
+function openModalSource(id){
+  _editingId=id||null;
+  var projs=S.projects;
+  var sel=document.getElementById('srcProject');
+  sel.innerHTML='<option value="">— kein Projekt —</option>';
+  projs.forEach(function(p){sel.innerHTML+='<option value="'+p.id+'">'+esc(p.name)+'</option>'});
+
+  if(id){
+    var src=S.sources.find(function(x){return x.id===id});
+    if(!src) return;
+    document.getElementById('modalSourceTitle').textContent='Quelle bearbeiten';
+    document.getElementById('srcType').value=src.type;
+    document.getElementById('srcTitle').value=src.title;
+    document.getElementById('srcAuthor').value=src.author||'';
+    document.getElementById('srcUrl').value=src.url||'';
+    document.getElementById('srcPages').value=src.pages||'';
+    document.getElementById('srcPageStart').value=src.pageStart||1;
+    document.getElementById('srcDuration').value=src.duration||'';
+    document.getElementById('srcNotes').value=src.notes||'';
+    document.getElementById('srcProject').value=src.projectId||'';
+  }else{
+    document.getElementById('modalSourceTitle').textContent='Neue Quelle';
+    ['srcTitle','srcAuthor','srcUrl','srcNotes'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('srcType').value='book';
+    document.getElementById('srcPages').value='';
+    document.getElementById('srcPageStart').value='1';
+    document.getElementById('srcDuration').value='';
+  }
+  toggleSourceFields();
+  openModal('modalSource');
+}
+
+function toggleSourceFields(){
+  var t=document.getElementById('srcType').value;
+  document.getElementById('srcBookFields').style.display=(t==='book'||t==='article')?'block':'none';
+  document.getElementById('srcVideoFields').style.display=t==='video'?'block':'none';
+}
+
+function saveSource(){
+  var title=document.getElementById('srcTitle').value.trim();
+  if(!title){toast('Titel erforderlich','err');return}
+  var type=document.getElementById('srcType').value;
+  var obj={
+    id:_editingId||uid(),
+    type:type,
+    title:title,
+    author:document.getElementById('srcAuthor').value.trim(),
+    url:document.getElementById('srcUrl').value.trim(),
+    pages:parseInt(document.getElementById('srcPages').value)||null,
+    pageStart:parseInt(document.getElementById('srcPageStart').value)||1,
+    duration:parseInt(document.getElementById('srcDuration').value)||null,
+    notes:document.getElementById('srcNotes').value.trim(),
+    projectId:document.getElementById('srcProject').value||null,
+    archived:false,
+    createdAt:new Date().toISOString()
+  };
+  if(_editingId){
+    var idx=S.sources.findIndex(function(x){return x.id===_editingId});
+    if(idx>=0){obj.archived=S.sources[idx].archived;S.sources[idx]=obj}
+  }else{
+    S.sources.push(obj);
+  }
+  save();closeModal('modalSource');renderQuellen();
+  toast('Quelle gespeichert','ok');
+}
+
+function deleteSource(id,skipConfirm){
+  if(!skipConfirm&&!confirm('Quelle und alle Abschnitte löschen?')) return;
+  S.sources=S.sources.filter(function(x){return x.id!==id});
+  S.sections=S.sections.filter(function(x){return x.sourceId!==id});
+  if(_expandedSourceId===id)_expandedSourceId=null;
+  save();renderQuellen();
+}
+
+function unarchiveSource(id){
+  var s=S.sources.find(function(x){return x.id===id});
+  if(s) s.archived=false;
+  save();renderQuellen();
+}
+
+// ═══════════════════════════════════════════════
+// SECTION GENERATOR MODAL
+// ═══════════════════════════════════════════════
+function openSectionModal(srcId){
+  _activeSrcId=srcId;
+  _pendingSections=[];
+  _genMethod=null;
+  var src=S.sources.find(function(x){return x.id===srcId});
+  if(!src) return;
+
+  // Set TOC prompt based on source type
+  var tocPrompt='Analysiere das Inhaltsverzeichnis dieses '+TYPE_LABELS[src.type]+'s.\n\nGib das Ergebnis als JSON-Array zurück — kein Markdown, kein Kommentar, nur JSON:\n[\n  {"title":"Kapitel-/Abschnittstitel","start":"Seite/Minute/Prozent","end":"Seite/Minute/Prozent"},\n  ...\n]\n\nBei Büchern: Seitenzahlen.\nBei Videos: Zeitangaben (z.B. "00:00" bis "12:30").\nBei Artikeln: Abschnittsnummern oder Prozentmarken.\n\nNur Haupt-Kapitel/Abschnitte (keine Sub-Unterkapitel), max. 30 Einträge.';
+  document.getElementById('tocPromptText').textContent=tocPrompt;
+
+  // Set unit default
+  var unitSel=document.getElementById('genUnit');
+  if(src.type==='video') unitSel.value='minutes';
+  else unitSel.value='pages';
+
+  // Reset UI
+  ['genEqualFields','genTocFields','genManualFields','sectionPreview'].forEach(function(id){document.getElementById(id).style.display='none'});
+  ['genOptEqual','genOptToc','genOptManual'].forEach(function(id){document.getElementById(id).classList.remove('selected')});
+  document.getElementById('tocResult').value='';
+  document.getElementById('manualSections').value='';
+
+  openModal('modalSections');
+}
+
+function selectGenMethod(method){
+  _genMethod=method;
+  ['genOptEqual','genOptToc','genOptManual'].forEach(function(id){document.getElementById(id).classList.remove('selected')});
+  document.getElementById('genOpt'+method.charAt(0).toUpperCase()+method.slice(1)).classList.add('selected');
+  document.getElementById('genEqualFields').style.display=method==='equal'?'block':'none';
+  document.getElementById('genTocFields').style.display=method==='toc'?'block':'none';
+  document.getElementById('genManualFields').style.display=method==='manual'?'block':'none';
+  document.getElementById('sectionPreview').style.display='none';
+}
+
+function copyTocPrompt(){
+  navigator.clipboard.writeText(document.getElementById('tocPromptText').textContent).then(function(){toast('Prompt kopiert','ok')});
+}
+
+function generateEqualSections(){
+  var src=S.sources.find(function(x){return x.id===_activeSrcId});
+  if(!src){toast('Quelle nicht gefunden','err');return}
+  var count=parseInt(document.getElementById('genCount').value)||10;
+  var unit=document.getElementById('genUnit').value;
+  var total=unit==='minutes'?(src.duration||0):(unit==='pages'?(src.pages||0):100);
+  if(!total){toast('Bitte Gesamtlänge in der Quelle eintragen','err');return}
+  var perSection=total/count;
+  var start=src.pageStart||1;
+  _pendingSections=[];
+  for(var i=0;i<count;i++){
+    var from=Math.round(start+i*perSection);
+    var to=i===count-1?Math.round(start+total-1):Math.round(start+(i+1)*perSection-1);
+    var range='';
+    if(unit==='pages') range='S. '+from+'–'+to;
+    else if(unit==='minutes') range=fmtMin(from)+'–'+fmtMin(to);
+    else range=Math.round(i/count*100)+'%–'+Math.round((i+1)/count*100)+'%';
+    _pendingSections.push({id:uid(),sourceId:_activeSrcId,title:'Abschnitt '+(i+1),range:range,steps:{}});
+  }
+  showSectionPreview();
+}
+
+function fmtMin(m){
+  var h=Math.floor(m/60);var mn=Math.round(m%60);
+  return h>0?h+'h'+String(mn).padStart(2,'0')+'min':mn+'min';
+}
+
+function importTocResult(){
+  var raw=document.getElementById('tocResult').value.trim();
+  try{
+    var data=JSON.parse(raw);
+    if(!Array.isArray(data)){toast('Muss ein JSON-Array sein','err');return}
+    _pendingSections=data.map(function(item){
+      var range='';
+      if(item.start&&item.end) range=item.start+' – '+item.end;
+      else if(item.start) range=item.start;
+      return {id:uid(),sourceId:_activeSrcId,title:item.title||'Abschnitt',range:range,steps:{}};
+    });
+    showSectionPreview();
+  }catch(e){toast('JSON-Fehler: '+e.message,'err')}
+}
+
+function importManualSections(){
+  var lines=document.getElementById('manualSections').value.split('\n').map(function(l){return l.trim()}).filter(Boolean);
+  _pendingSections=lines.map(function(line){
+    var rangeMatch=line.match(/\[([^\]]+)\]/);
+    var range=rangeMatch?rangeMatch[1]:'';
+    var title=line.replace(/\[([^\]]+)\]/,'').trim();
+    return {id:uid(),sourceId:_activeSrcId,title:title||line,range:range,steps:{}};
+  });
+  showSectionPreview();
+}
+
+function showSectionPreview(){
+  if(!_pendingSections.length){toast('Keine Abschnitte generiert','err');return}
+  var html='';
+  _pendingSections.forEach(function(sec,i){
+    html+='<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">';
+    html+='<span style="font-family:var(--mono);font-size:10px;color:var(--ink-dim);width:22px;text-align:right">'+(i+1)+'.</span>';
+    html+='<span style="flex:1;font-size:13px">'+esc(sec.title)+'</span>';
+    if(sec.range) html+='<span style="font-family:var(--mono);font-size:10px;color:var(--ink-mid)">'+esc(sec.range)+'</span>';
+    html+='</div>';
+  });
+  document.getElementById('sectionPreviewList').innerHTML=html;
+  document.getElementById('sectionPreview').style.display='block';
+}
+
+function confirmSections(){
+  // Remove existing sections for this source, add new
+  S.sections=S.sections.filter(function(s){return s.sourceId!==_activeSrcId});
+  _pendingSections.forEach(function(sec){S.sections.push(sec)});
+  save();closeModal('modalSections');
+  _expandedSourceId=_activeSrcId;
+  renderQuellen();
+  toast(_pendingSections.length+' Abschnitte gespeichert','ok');
+}
+
+// ═══════════════════════════════════════════════
+// PROJEKTE TAB
+// ═══════════════════════════════════════════════
+function renderProjekte(){
+  var el=document.getElementById('tab-projekte');
+  var html='<div class="card">';
+  html+='<div class="card-title">🗂 NotebookLM-Projekte<div class="ct-actions"><button class="btn btn-amber btn-sm" onclick="openModalProject()">+ Projekt</button></div></div>';
+
+  if(!S.projects.length){
+    html+='<div class="empty"><div class="empty-icon">🗂</div>Noch keine Projekte.<br>Ein Projekt entspricht einem NotebookLM-Notebook.</div>';
+  }else{
+    S.projects.forEach(function(p){
+      var srcCount=S.sources.filter(function(s){return s.projectId===p.id}).length;
+      html+='<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px">';
+      html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+      html+='<div>';
+      html+='<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+esc(p.name)+'</div>';
+      html+='<div style="font-size:10px;font-family:var(--mono);color:var(--ink-mid)">'+esc(CTX_LABELS[p.contextType]||p.contextType)+' · '+srcCount+' Quelle(n)</div>';
+      if(p.description) html+='<div style="font-size:12px;color:var(--ink-mid);margin-top:5px">'+esc(p.description)+'</div>';
+      if(p.nlmUrl) html+='<div style="margin-top:6px"><a href="'+esc(p.nlmUrl)+'" target="_blank" style="font-size:11px;color:var(--teal);font-family:var(--mono)">→ NotebookLM öffnen</a></div>';
+      html+='</div>';
+      html+='<div style="display:flex;gap:5px">';
+      html+='<button class="btn btn-ghost btn-sm" onclick="openModalProject(\''+p.id+'\')">✏️</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deleteProject(\''+p.id+'\')">🗑</button>';
+      html+='</div></div></div>';
+    });
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function openModalProject(id){
+  _editingId=id||null;
+  if(id){
+    var p=S.projects.find(function(x){return x.id===id});
+    if(!p) return;
+    document.getElementById('modalProjectTitle').textContent='Projekt bearbeiten';
+    document.getElementById('mpName').value=p.name;
+    document.getElementById('mpContextType').value=p.contextType;
+    document.getElementById('mpNlmUrl').value=p.nlmUrl||'';
+    document.getElementById('mpDesc').value=p.description||'';
+  }else{
+    document.getElementById('modalProjectTitle').textContent='Neues Projekt';
+    ['mpName','mpNlmUrl','mpDesc'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('mpContextType').value='single_book';
+  }
+  openModal('modalProject');
+}
+
+function saveProject(){
+  var name=document.getElementById('mpName').value.trim();
+  if(!name){toast('Name erforderlich','err');return}
+  var obj={
+    id:_editingId||uid(),
+    name:name,
+    contextType:document.getElementById('mpContextType').value,
+    nlmUrl:document.getElementById('mpNlmUrl').value.trim(),
+    description:document.getElementById('mpDesc').value.trim(),
+    createdAt:new Date().toISOString()
+  };
+  if(_editingId){var idx=S.projects.findIndex(function(x){return x.id===_editingId});if(idx>=0)S.projects[idx]=obj}
+  else S.projects.push(obj);
+  save();closeModal('modalProject');renderProjekte();
+  toast('Projekt gespeichert','ok');
+}
+
+function deleteProject(id){
+  if(!confirm('Projekt löschen? Verknüpfte Quellen bleiben erhalten.')) return;
+  S.projects=S.projects.filter(function(x){return x.id!==id});
+  S.sources.forEach(function(s){if(s.projectId===id)s.projectId=null});
+  save();renderProjekte();
+}
+
+// ═══════════════════════════════════════════════
+// SESSIONS TAB
+// ═══════════════════════════════════════════════
+function renderSessions(){
+  var el=document.getElementById('tab-sessions');
+  var html='<div class="card">';
+  html+='<div class="card-title">🔬 Sessions<div class="ct-actions"><button class="btn btn-amber btn-sm" onclick="openModalSession()">+ Session</button></div></div>';
+
+  if(!S.sessions.length){
+    html+='<div class="empty"><div class="empty-icon">🔬</div>Noch keine Sessions. Importiere deinen ersten Output.</div>';
+  }else{
+    S.sessions.slice().reverse().forEach(function(s){
+      var srcName='';
+      if(s.sourceId){var src=S.sources.find(function(x){return x.id===s.sourceId});if(src)srcName=src.title}
+      var secName='';
+      if(s.sectionId){var sec=S.sections.find(function(x){return x.id===s.sectionId});if(sec)secName=sec.title}
+      html+='<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px">';
+      html+='<div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">';
+      html+='<div style="flex:1">';
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+      html+='<span style="font-weight:700;font-size:12px">'+esc(SESSION_LABELS[s.type]||s.type)+'</span>';
+      html+='<span class="pill pill-'+s.status+'">'+s.status+'</span>';
+      html+='</div>';
+      html+='<div style="font-size:10px;font-family:var(--mono);color:var(--ink-dim)">';
+      html+=new Date(s.createdAt).toLocaleDateString('de-DE');
+      if(srcName) html+=' · '+esc(srcName);
+      if(secName) html+=' / '+esc(secName);
+      html+='</div></div>';
+      html+='<div style="display:flex;gap:5px">';
+      if(s.status==='raw') html+='<button class="btn btn-ghost btn-sm" onclick="openCleanModal(\''+s.id+'\')">🧹 Bereinigen</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deleteSession(\''+s.id+'\')">🗑</button>';
+      html+='</div></div>';
+      if(s.cleanedOutput){
+        html+='<div style="margin-top:8px"><div class="prompt-text" style="max-height:80px">'+esc(s.cleanedOutput)+'</div></div>';
+      }else if(s.rawOutput){
+        html+='<div style="margin-top:8px"><div class="prompt-text" style="max-height:60px;opacity:.6">'+esc(s.rawOutput)+'</div></div>';
+      }
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function openModalSession(){
+  _editingId=null;
+  document.getElementById('modalSessionTitle').textContent='Neue Session';
+  document.getElementById('msType').value='audio_summary';
+  document.getElementById('msPrompt').value='';
+  document.getElementById('msRaw').value='';
+
+  var srcSel=document.getElementById('msSource');
+  srcSel.innerHTML='<option value="">— keine —</option>';
+  S.sources.forEach(function(src){srcSel.innerHTML+='<option value="'+src.id+'">'+esc(src.title)+'</option>'});
+  document.getElementById('msSection').innerHTML='<option value="">— ganze Quelle —</option>';
+
+  srcSel.onchange=function(){
+    var sel=document.getElementById('msSection');
+    sel.innerHTML='<option value="">— ganze Quelle —</option>';
+    if(srcSel.value){
+      S.sections.filter(function(s){return s.sourceId===srcSel.value}).forEach(function(sec){
+        sel.innerHTML+='<option value="'+sec.id+'">'+esc(sec.title)+'</option>';
+      });
+    }
+  };
+  openModal('modalSession');
+}
+
+function saveSession(){
+  var raw=document.getElementById('msRaw').value.trim();
+  if(!raw){toast('Output erforderlich','err');return}
+  S.sessions.push({
+    id:uid(),
+    sourceId:document.getElementById('msSource').value||null,
+    sectionId:document.getElementById('msSection').value||null,
+    createdAt:new Date().toISOString(),
+    type:document.getElementById('msType').value,
+    promptUsed:document.getElementById('msPrompt').value.trim(),
+    rawOutput:raw,cleanedOutput:'',structuredData:null,
+    status:'raw',exportedToCards:false
+  });
+  save();closeModal('modalSession');renderSessions();
+  toast('Session gespeichert','ok');
+}
+
+function openCleanModal(sessionId){
+  _cleaningSessionId=sessionId;
+  var s=S.sessions.find(function(x){return x.id===sessionId});
+  if(!s) return;
+  var typeMap={audio_summary:'AUDIO_SUMMARY',mindmap:'MINDMAP',qa_session:'QA_SESSION',quiz:'QUIZ',flashcards:'FLASHCARDS',pdf_cleanup:'PDF_CLEANUP',custom:'CUSTOM'};
+  var cp='Du bekommst einen rohen NotebookLM-Output vom Typ '+typeMap[s.type]+'.\nBereinige nach diesen Regeln:\n- Entferne Formatierungsfehler, doppelte Leerzeilen, abgeschnittene Sätze\n- Bewahre alle Informationen vollständig\n- Strukturiere mit Markdown-Überschriften\n- Gib NUR den bereinigten Text zurück\n\n=== RAW OUTPUT ===\n'+s.rawOutput;
+  document.getElementById('cleanPromptText').textContent=cp;
+  document.getElementById('cleanResult').value='';
+  openModal('modalClean');
+}
+
+function copyCleanPrompt(){
+  navigator.clipboard.writeText(document.getElementById('cleanPromptText').textContent).then(function(){toast('Prompt kopiert','ok')});
+}
+
+function saveCleanResult(){
+  var r=document.getElementById('cleanResult').value.trim();
+  if(!r){toast('Kein Ergebnis eingefügt','err');return}
+  var s=S.sessions.find(function(x){return x.id===_cleaningSessionId});
+  if(!s) return;
+  s.cleanedOutput=r;s.status='cleaned';
+  save();closeModal('modalClean');renderSessions();
+  toast('Als CLEANED gespeichert','ok');
+}
+
+function deleteSession(id){
+  if(!confirm('Session löschen?')) return;
+  S.sessions=S.sessions.filter(function(x){return x.id!==id});
+  save();renderSessions();
+}
+
+// ═══════════════════════════════════════════════
+// FLASHCARDS + SRS
+// ═══════════════════════════════════════════════
+function renderFlashcards(){
+  var el=document.getElementById('tab-flashcards');
+  updateRevBadge();
+  if(_reviewMode&&_reviewQueue.length){el.innerHTML=renderReviewCard();return}
+
+  var today=new Date().toISOString().slice(0,10);
+  var due=S.cards.filter(function(c){return !c.nextReview||c.nextReview.slice(0,10)<=today});
+
+  var html='<div class="card">';
+  html+='<div class="card-title">🃏 Flashcards<div class="ct-actions">';
+  if(due.length) html+='<button class="btn btn-teal btn-sm" onclick="startReview()">▶ Review ('+due.length+')</button>';
+  html+='<button class="btn btn-amber btn-sm" onclick="openModalFlashcard()">+ Karte</button>';
+  html+='</div></div>';
+
+  if(due.length) html+='<div class="notice notice-warn">📅 '+due.length+' Karten fällig.</div>';
+  else if(S.cards.length) html+='<div class="notice notice-ok">✅ Alle Karten aktuell.</div>';
+
+  if(!S.cards.length){
+    html+='<div class="empty"><div class="empty-icon">🃏</div>Noch keine Flashcards.</div>';
+  }else{
+    S.cards.slice().reverse().forEach(function(c){
+      var isDue=!c.nextReview||c.nextReview.slice(0,10)<=today;
+      var srcName='';
+      if(c.sourceId){var src=S.sources.find(function(x){return x.id===c.sourceId});if(src)srcName=src.title}
+      html+='<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px">';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="display:flex;gap:5px;margin-bottom:3px">';
+      html+='<span class="pill" style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.3);color:var(--amber)">'+c.cardType.toUpperCase()+'</span>';
+      if(isDue) html+='<span class="pill pill-raw">FÄLLIG</span>';
+      html+='</div>';
+      html+='<div style="font-size:13px;font-weight:600;margin-bottom:2px">'+esc(c.cardType==='cloze'?c.clozeText:c.learnable)+'</div>';
+      if(c.cardType==='mc') html+='<div style="font-size:11px;color:var(--ink-mid)">→ '+esc(c.definition)+'</div>';
+      html+='<div style="font-size:10px;font-family:var(--mono);color:var(--ink-dim);margin-top:3px">Reps:'+c.reps+' · Int:'+c.interval+'d · EF:'+c.efactor.toFixed(2)+(srcName?' · '+esc(srcName):'')+'</div>';
+      html+='</div>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deleteCard(\''+c.id+'\')">🗑</button>';
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function renderReviewCard(){
+  if(_reviewIndex>=_reviewQueue.length){
+    _reviewMode=false;
+    return '<div class="card"><div class="card-title">🎉 Review abgeschlossen!</div><div class="empty"><div class="empty-icon">✅</div>Alle fälligen Karten bearbeitet.</div><button class="btn btn-amber" style="margin-top:12px" onclick="renderFlashcards()">Zurück</button></div>';
+  }
+  var c=_reviewQueue[_reviewIndex];
+  var html='<div class="card"><div class="card-title">🃏 Review '+(_reviewIndex+1)+' / '+_reviewQueue.length+'<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="stopReview()">✕ Beenden</button></div>';
+  html+='<div style="background:var(--surface-3);border:1px solid var(--border-hi);border-radius:var(--r);padding:24px;text-align:center;margin-bottom:14px">';
+  if(c.cardType==='mc'){
+    html+='<div style="font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.5">'+esc(c.learnable)+'</div>';
+    if(!_reviewAnswered){
+      var sh=shuffleArr(c.choices.slice());
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      sh.forEach(function(ch){
+        html+='<button class="fc-choice" onclick="answerMC(\''+c.id+'\',this,'+(ch===c.choices[0]?'true':'false')+')">'+esc(ch)+'</button>';
+      });
+      html+='</div>';
+    }else{
+      html+='<div style="color:var(--amber);font-size:15px;margin-top:8px">'+esc(c.definition)+'</div>';
+      if(c.extra) html+='<div style="color:var(--ink-mid);font-size:12px;margin-top:6px">'+esc(c.extra)+'</div>';
+    }
+  }else if(c.cardType==='cloze'){
+    html+='<div style="font-size:16px;font-weight:600;margin-bottom:14px;line-height:1.6">'+esc(c.clozeText).replace(/\{\{c1::.*?\}\}/g,'<span style="background:var(--amber);color:#0e0e0e;padding:1px 8px;border-radius:2px">?</span>')+'</div>';
+    if(!_reviewAnswered){
+      var sc=shuffleArr((c.choices||[]).slice());
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      sc.forEach(function(ch){
+        html+='<button class="fc-choice" onclick="answerCloze(\''+c.id+'\',this,'+(ch===c.choices[0]?'true':'false')+')">'+esc(ch)+'</button>';
+      });
+      html+='</div>';
+    }else{
+      html+='<div style="color:var(--amber);font-size:15px;margin-top:8px">'+esc(c.clozeText)+'</div>';
+    }
+  }
+  if(_reviewAnswered){
+    html+='<div style="display:flex;gap:5px;justify-content:center;margin-top:16px;flex-wrap:wrap">';
+    [[0,'Falsch','var(--rose)'],[1,'Schwach','var(--rose)'],[2,'Unsicher','var(--amber-dim)'],[3,'Okay','var(--slate)'],[4,'Gut','var(--sage)'],[5,'Perfekt','var(--teal)']].forEach(function(q){
+      html+='<button class="btn btn-sm" style="background:transparent;border:1px solid '+q[2]+';color:'+q[2]+'" onclick="rateCard(\''+c.id+'\','+q[0]+')">'+q[0]+' '+q[1]+'</button>';
+    });
+    html+='</div>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+// Inline styles for fc-choice buttons
+document.head.insertAdjacentHTML('beforeend','<style>.fc-choice{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;cursor:pointer;font-size:13px;text-align:left;color:var(--ink);transition:all .12s;font-family:var(--body)}.fc-choice:hover{border-color:var(--amber-dim)}.fc-choice.correct{border-color:var(--sage);background:var(--sage-bg);color:var(--sage)}.fc-choice.wrong{border-color:var(--rose);background:var(--rose-bg);color:var(--rose)}</style>');
+
+function startReview(){
+  var today=new Date().toISOString().slice(0,10);
+  _reviewQueue=S.cards.filter(function(c){return !c.nextReview||c.nextReview.slice(0,10)<=today});
+  if(!_reviewQueue.length){toast('Keine fälligen Karten','ok');return}
+  _reviewMode=true;_reviewIndex=0;_reviewAnswered=false;
+  renderFlashcards();
+}
+function stopReview(){_reviewMode=false;renderFlashcards()}
+
+function answerMC(cardId,btn,isCorrect){
+  _reviewAnswered=true;
+  btn.classList.add(isCorrect?'correct':'wrong');
+  if(!isCorrect){
+    var c=S.cards.find(function(x){return x.id===cardId});
+    document.querySelectorAll('.fc-choice').forEach(function(b){if(b.textContent.trim()===c.choices[0])b.classList.add('correct')});
+  }
+  setTimeout(function(){document.getElementById('tab-flashcards').innerHTML=renderReviewCard()},isCorrect?250:0);
+}
+function answerCloze(cardId,btn,isCorrect){
+  _reviewAnswered=true;
+  btn.classList.add(isCorrect?'correct':'wrong');
+  setTimeout(function(){document.getElementById('tab-flashcards').innerHTML=renderReviewCard()},isCorrect?250:0);
+}
+function rateCard(cardId,quality){
+  var c=S.cards.find(function(x){return x.id===cardId});
+  if(!c) return;
+  updateSM2(c,quality);save();
+  _reviewIndex++;_reviewAnswered=false;
+  if(_reviewIndex>=_reviewQueue.length){_reviewMode=false;toast('Review abgeschlossen! 🎉','ok')}
+  renderFlashcards();
+}
+function updateSM2(card,quality){
+  if(quality>=3){
+    if(card.reps===0) card.interval=1;
+    else if(card.reps===1) card.interval=6;
+    else card.interval=Math.round(card.interval*card.efactor);
+    card.reps++;
+  }else{card.reps=0;card.interval=1}
+  card.efactor=Math.max(1.3,card.efactor+(0.1-(5-quality)*(0.08+(5-quality)*0.02)));
+  card.nextReview=new Date(Date.now()+card.interval*86400000).toISOString();
+}
+function updateRevBadge(){
+  var today=new Date().toISOString().slice(0,10);
+  var n=S.cards.filter(function(c){return !c.nextReview||c.nextReview.slice(0,10)<=today}).length;
+  var b=document.getElementById('revBadge');
+  if(b){b.textContent=n;b.style.display=n>0?'inline':'none'}
+}
+
+function openModalFlashcard(id){
+  _editingId=id||null;
+  var srcSel=document.getElementById('fcSource');
+  srcSel.innerHTML='<option value="">— keine —</option>';
+  S.sources.forEach(function(s){srcSel.innerHTML+='<option value="'+s.id+'">'+esc(s.title)+'</option>'});
+  if(id){
+    var c=S.cards.find(function(x){return x.id===id});if(!c)return;
+    document.getElementById('modalFCTitle').textContent='Karte bearbeiten';
+    document.getElementById('fcType').value=c.cardType;
+    document.getElementById('fcLearnable').value=c.learnable||'';
+    document.getElementById('fcDef').value=c.definition||'';
+    document.getElementById('fcC2').value=c.choices[1]||'';
+    document.getElementById('fcC3').value=c.choices[2]||'';
+    document.getElementById('fcC4').value=c.choices[3]||'';
+    document.getElementById('fcExtra').value=c.extra||'';
+    document.getElementById('fcCloze').value=c.clozeText||'';
+    document.getElementById('fcClozeAns').value=c.choices[0]||'';
+    document.getElementById('fcTags').value=(c.tags||[]).join(' ');
+    document.getElementById('fcSource').value=c.sourceId||'';
+  }else{
+    document.getElementById('modalFCTitle').textContent='Neue Flashcard';
+    ['fcLearnable','fcDef','fcC2','fcC3','fcC4','fcExtra','fcCloze','fcClozeAns','fcClozeC2','fcClozeC3','fcClozeC4','fcTags'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('fcType').value='mc';
+  }
+  toggleFCFields();openModal('modalFlashcard');
+}
+function toggleFCFields(){
+  var t=document.getElementById('fcType').value;
+  document.getElementById('fcMCFields').style.display=t==='mc'?'block':'none';
+  document.getElementById('fcClozeFields').style.display=t==='cloze'?'block':'none';
+}
+function saveFlashcard(){
+  var type=document.getElementById('fcType').value;
+  var tags=document.getElementById('fcTags').value.trim().split(/\s+/).filter(Boolean);
+  var srcId=document.getElementById('fcSource').value||null;
+  var now=new Date().toISOString();
+  var card;
+  if(type==='mc'){
+    var l=document.getElementById('fcLearnable').value.trim();
+    var d=document.getElementById('fcDef').value.trim();
+    if(!l||!d){toast('Vorderseite und Antwort erforderlich','err');return}
+    card={id:_editingId||uid(),sourceId:srcId,sessionId:null,cardType:'mc',learnable:l,definition:d,
+      choices:[d,document.getElementById('fcC2').value.trim(),document.getElementById('fcC3').value.trim(),document.getElementById('fcC4').value.trim()],
+      extra:document.getElementById('fcExtra').value.trim(),tags:tags,reps:0,interval:1,efactor:2.5,nextReview:now,createdAt:now};
+  }else{
+    var ct=document.getElementById('fcCloze').value.trim();
+    var ca=document.getElementById('fcClozeAns').value.trim();
+    if(!ct){toast('Cloze-Text erforderlich','err');return}
+    card={id:_editingId||uid(),sourceId:srcId,sessionId:null,cardType:'cloze',clozeText:ct,learnable:ct,definition:ca,
+      choices:[ca,document.getElementById('fcClozeC2').value.trim(),document.getElementById('fcClozeC3').value.trim(),document.getElementById('fcClozeC4').value.trim()],
+      tags:tags,reps:0,interval:1,efactor:2.5,nextReview:now,createdAt:now};
+  }
+  if(_editingId){var idx=S.cards.findIndex(function(x){return x.id===_editingId});if(idx>=0)S.cards[idx]=card}
+  else S.cards.push(card);
+  save();closeModal('modalFlashcard');renderFlashcards();
+  toast('Flashcard gespeichert','ok');
+}
+function deleteCard(id){
+  if(!confirm('Karte löschen?')) return;
+  S.cards=S.cards.filter(function(x){return x.id!==id});
+  save();renderFlashcards();
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT TAB
+// ═══════════════════════════════════════════════
+function renderExport(){
+  var el=document.getElementById('tab-export');
+  var rootDeck=S.config.ankiRootDeck||'Longform';
+
+  // ── Anki CSV
+  var html='<div class="card"><div class="card-title">📤 Anki-CSV-Export</div>';
+  html+='<div class="grid-2">';
+  html+='<div class="form-row"><label>Quelle filtern</label><select id="exportSrcFilter"><option value="">Alle Quellen</option>';
+  S.sources.forEach(function(s){html+='<option value="'+s.id+'">'+esc(s.title)+'</option>'});
+  html+='</select></div>';
+  html+='<div class="form-row"><label>Kartentyp</label><select id="exportTypeFilter"><option value="mc">MC</option><option value="cloze">Cloze</option><option value="all">Alle</option></select></div>';
+  html+='</div>';
+  html+='<button class="btn btn-amber" onclick="doExport()">⬇ CSV herunterladen</button></div>';
+
+  // ── AnkiConnect
+  html+='<div class="card"><div class="card-title">🔗 AnkiConnect (localhost:8765)</div>';
+  html+='<div class="notice notice-info">Anki muss geöffnet und AnkiConnect installiert sein.</div>';
+  html+='<div class="form-row"><label>Root-Deck</label>';
+  html+='<input type="text" id="ankiRootDeckInput" value="'+esc(rootDeck)+'" placeholder="Longform">';
+  html+='<div class="form-hint">Deck-Hierarchie: '+esc(rootDeck)+'::Quelltitel::Abschnittstitel</div></div>';
+  html+='<div class="grid-2">';
+  html+='<div class="form-row"><label>Quelle</label><select id="ankiSrcFilter"><option value="">Alle Quellen</option>';
+  S.sources.forEach(function(s){html+='<option value="'+s.id+'">'+esc(s.title)+'</option>'});
+  html+='</select></div>';
+  html+='<div class="form-row"><label>Kartentyp</label><select id="ankiTypeFilter"><option value="mc">MC</option><option value="cloze">Cloze</option><option value="all">Alle</option></select></div>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn btn-teal" onclick="ankiConnectPush()">⬆ An Anki senden</button>';
+  html+='<button class="btn btn-ghost" onclick="ankiConnectTest()">🔌 Verbindung testen</button>';
+  html+='</div>';
+  html+='<div id="ankiStatus" style="font-size:11px;font-family:var(--mono);color:var(--ink-dim);margin-top:8px"></div>';
+  html+='</div>';
+
+  // ── ZIP Backup
+  html+='<div class="card"><div class="card-title">📦 ZIP-Backup</div>';
+  html+='<div style="font-size:11px;font-family:var(--mono);color:var(--ink-mid);margin-bottom:10px;line-height:1.8">';
+  html+='Enthält: manifest.json · sources/[id].json · sections.json · projects.json<br>';
+  html+='sessions.json · cards.json · prompts.json · config.json · anki_mc.csv · anki_cloze.csv';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn btn-amber" onclick="exportZip()">⬇ ZIP herunterladen</button>';
+  html+='</div></div>';
+
+  // ── JSON Import/Export
+  html+='<div class="card"><div class="card-title">💾 JSON-Export / Import</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn btn-ghost" onclick="exportJSON()">⬇ JSON exportieren</button>';
+  html+='<button class="btn btn-ghost" onclick="document.getElementById(\'jsonImp\').click()">⬆ JSON importieren</button>';
+  html+='<input type="file" id="jsonImp" style="display:none" accept=".json" onchange="importJSON(this)">';
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+function doExport(){
+  var srcId=document.getElementById('exportSrcFilter').value;
+  var typeF=document.getElementById('exportTypeFilter').value;
+  var cards=S.cards.filter(function(c){
+    if(srcId&&c.sourceId!==srcId) return false;
+    if(typeF!=='all'&&c.cardType!==typeF) return false;
+    return true;
+  });
+  if(!cards.length){toast('Keine Karten für diese Filter','err');return}
+  var rows=['\ufeff'];
+  var mc=cards.filter(function(c){return c.cardType==='mc'});
+  if(mc.length){
+    rows.push('Learnable;Definition;Audio;Mems;Attributes;Extra;Extra 2;Choices;Tags');
+    mc.forEach(function(c){
+      var ch=c.choices.map(function(x){return x||''}).join(' | ');
+      var tags=(c.tags||[]).map(function(t){return t.replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')}).join(' ');
+      rows.push([c.learnable,c.definition,'','','',c.extra||'','',ch,tags].join(';'));
+    });
+  }
+  var cloze=cards.filter(function(c){return c.cardType==='cloze'});
+  if(cloze.length){
+    if(mc.length) rows.push('');
+    rows.push('Text;Audio;Mems;Attributes;Extra;Extra 2;Choices;Tags');
+    cloze.forEach(function(c){
+      var ch=(c.choices||[]).map(function(x){return x||''}).join(' | ');
+      var tags=(c.tags||[]).join(' ');
+      rows.push([c.clozeText,'','','','','',ch,tags].join(';'));
+    });
+  }
+  var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='longform_anki_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);
+  toast('CSV exportiert ('+cards.length+' Karten)','ok');
+}
+function exportJSON(){
+  var data=JSON.stringify({version:1,exported:new Date().toISOString(),state:S},null,2);
+  var blob=new Blob([data],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='longform_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
+  toast('JSON exportiert','ok');
+}
+function importJSON(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      var imp=data.state||data;
+      if(!imp.sources&&!imp.projects){toast('Ungültiges Format','err');return}
+      var merged=0;
+      ['sources','sections','projects','sessions','cards','prompts'].forEach(function(key){
+        if(imp[key]) imp[key].forEach(function(item){
+          if(!S[key]){S[key]=[]}
+          if(!S[key].find(function(x){return x.id===item.id})){S[key].push(item);merged++}
+        });
+      });
+      save();renderTab(_activeTab);toast('Import: '+merged+' neue Einträge','ok');
+    }catch(e){toast('JSON-Fehler: '+e.message,'err')}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+// ═══════════════════════════════════════════════
+// ZIP BACKUP
+// ═══════════════════════════════════════════════
+function buildAnkiCsvRows(cards, type) {
+  var filtered = cards.filter(function(c){ return type==='all' || c.cardType===type; });
+  if (!filtered.length) return '';
+  var rows = ['\ufeff'];
+  var mc = filtered.filter(function(c){ return c.cardType==='mc'; });
+  var cloze = filtered.filter(function(c){ return c.cardType==='cloze'; });
+  if (mc.length) {
+    rows.push('Learnable;Definition;Audio;Mems;Attributes;Extra;Extra 2;Choices;Tags');
+    mc.forEach(function(c){
+      var ch=c.choices.map(function(x){return x||''}).join(' | ');
+      var tags=(c.tags||[]).map(function(t){return t.replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')}).join(' ');
+      rows.push([c.learnable,c.definition,'','','',c.extra||'','',ch,tags].join(';'));
+    });
+  }
+  if (cloze.length) {
+    if (mc.length) rows.push('');
+    rows.push('Text;Audio;Mems;Attributes;Extra;Extra 2;Choices;Tags');
+    cloze.forEach(function(c){
+      var ch=(c.choices||[]).map(function(x){return x||''}).join(' | ');
+      var tags=(c.tags||[]).join(' ');
+      rows.push([c.clozeText,'','','','','',ch,tags].join(';'));
+    });
+  }
+  return rows.join('\n');
+}
+
+async function exportZip() {
+  if (typeof JSZip === 'undefined') { toast('JSZip nicht geladen — Netzwerk prüfen','err'); return; }
+  var zip = new JSZip();
+  var now = new Date().toISOString();
+  var dateStr = now.slice(0,10);
+
+  // manifest
+  zip.file('manifest.json', JSON.stringify({
+    format: 'longform-zip-v1',
+    exported: now,
+    version: 1,
+    counts: {
+      sources: S.sources.length,
+      sections: S.sections.length,
+      projects: S.projects.length,
+      sessions: S.sessions.length,
+      cards: S.cards.length,
+      prompts: S.prompts.length
+    }
+  }, null, 2));
+
+  // per-source JSON files
+  var sourcesFolder = zip.folder('sources');
+  S.sources.forEach(function(src){
+    var srcSections = S.sections.filter(function(s){ return s.sourceId === src.id; });
+    sourcesFolder.file(src.id + '.json', JSON.stringify({source: src, sections: srcSections}, null, 2));
+  });
+
+  // flat files
+  zip.file('sections.json',  JSON.stringify(S.sections, null, 2));
+  zip.file('projects.json',  JSON.stringify(S.projects, null, 2));
+  zip.file('sessions.json',  JSON.stringify(S.sessions, null, 2));
+  zip.file('cards.json',     JSON.stringify(S.cards, null, 2));
+  zip.file('prompts.json',   JSON.stringify(S.prompts, null, 2));
+  zip.file('config.json',    JSON.stringify(S.config, null, 2));
+
+  // Anki CSVs
+  var mcCsv = buildAnkiCsvRows(S.cards, 'mc');
+  var clozeCsv = buildAnkiCsvRows(S.cards, 'cloze');
+  if (mcCsv)    zip.file('anki_mc.csv', mcCsv);
+  if (clozeCsv) zip.file('anki_cloze.csv', clozeCsv);
+
+  try {
+    var blob = await zip.generateAsync({type:'blob', compression:'DEFLATE'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'longform_backup_' + dateStr + '.zip';
+    a.click(); URL.revokeObjectURL(url);
+    toast('ZIP exportiert ('+S.sources.length+' Quellen, '+S.cards.length+' Karten)','ok');
+  } catch(e) { toast('ZIP-Fehler: '+e.message,'err'); }
+}
+
+// ═══════════════════════════════════════════════
+// ANKICONNECT
+// ═══════════════════════════════════════════════
+var ANKI_URL = 'http://localhost:8765';
+
+function ankiRequest(action, params) {
+  return fetch(ANKI_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: action, version: 6, params: params || {}})
+  }).then(function(r){ return r.json(); });
+}
+
+function ankiConnectTest() {
+  var el = document.getElementById('ankiStatus');
+  if (el) el.textContent = 'Verbinde...';
+  ankiRequest('version').then(function(r){
+    if (el) el.textContent = '✅ AnkiConnect v' + r.result + ' verbunden';
+  }).catch(function(){
+    if (el) el.textContent = '❌ Keine Verbindung — Anki geöffnet und AnkiConnect installiert?';
+  });
+}
+
+function sanitizeDeckName(str) {
+  return (str||'Unbekannt')
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue')
+    .replace(/Ä/g,'Ae').replace(/Ö/g,'Oe').replace(/Ü/g,'Ue').replace(/ß/g,'ss')
+    .replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'')
+    .trim().replace(/\s+/g,'-');
+}
+
+async function ankiConnectPush() {
+  var rootDeckInput = document.getElementById('ankiRootDeckInput');
+  var rootDeck = (rootDeckInput ? rootDeckInput.value.trim() : '') || S.config.ankiRootDeck || 'Longform';
+  // Save root deck preference
+  S.config.ankiRootDeck = rootDeck; save();
+
+  var srcId = document.getElementById('ankiSrcFilter').value;
+  var typeF = document.getElementById('ankiTypeFilter').value;
+  var statusEl = document.getElementById('ankiStatus');
+
+  var cards = S.cards.filter(function(c){
+    if (srcId && c.sourceId !== srcId) return false;
+    if (typeF !== 'all' && c.cardType !== typeF) return false;
+    return true;
+  });
+  if (!cards.length) { toast('Keine Karten für diese Filter','err'); return; }
+  if (statusEl) statusEl.textContent = 'Verbinde...';
+
+  // Test connection first
+  try { await ankiRequest('version'); }
+  catch(e) { if(statusEl) statusEl.textContent='❌ Keine AnkiConnect-Verbindung'; toast('AnkiConnect nicht erreichbar','err'); return; }
+
+  var added = 0; var skipped = 0; var errors = 0;
+
+  for (var i = 0; i < cards.length; i++) {
+    var c = cards[i];
+    // Build deck name: Root::SourceTitle::SectionTitle
+    var srcTitle = 'Allgemein';
+    if (c.sourceId) {
+      var src = S.sources.find(function(x){ return x.id === c.sourceId; });
+      if (src) srcTitle = sanitizeDeckName(src.title);
+    }
+    var secTitle = '';
+    if (c.sessionId) {
+      var sec = S.sections.find(function(x){ return x.id === c.sessionId; });
+      if (sec) secTitle = sanitizeDeckName(sec.title);
+    }
+    var deckName = rootDeck + '::' + srcTitle + (secTitle ? '::' + secTitle : '');
+
+    // Build tags
+    var tags = [rootDeck];
+    if (c.sourceId) { var srcObj=S.sources.find(function(x){return x.id===c.sourceId}); if(srcObj) tags.push(rootDeck+'::'+sanitizeDeckName(srcObj.title)); }
+    // Project tag
+    if (c.sourceId) {
+      var srcForProj = S.sources.find(function(x){ return x.id===c.sourceId; });
+      if (srcForProj && srcForProj.projectId) {
+        var proj = S.projects.find(function(x){ return x.id===srcForProj.projectId; });
+        if (proj) tags.push('Projekt::'+sanitizeDeckName(proj.name));
+      }
+    }
+    // User tags
+    (c.tags||[]).forEach(function(t){ tags.push(t); });
+
+    var note;
+    if (c.cardType === 'mc') {
+      note = {
+        deckName: deckName,
+        modelName: 'Basic',
+        fields: {
+          Front: c.learnable || '',
+          Back: c.definition + (c.extra ? '\n\n' + c.extra : '') +
+                '\n\n<hr><small>' + (c.choices.slice(1).filter(Boolean).join(' · ')) + '</small>'
+        },
+        tags: tags
+      };
+    } else if (c.cardType === 'cloze') {
+      note = {
+        deckName: deckName,
+        modelName: 'Cloze',
+        fields: { Text: c.clozeText || '' },
+        tags: tags
+      };
+    }
+    if (!note) continue;
+
+    try {
+      var r = await ankiRequest('addNote', {note: note});
+      if (r.error) { skipped++; }
+      else { added++; }
+    } catch(e) { errors++; }
+
+    if (statusEl) statusEl.textContent = 'Sende ' + (i+1) + '/' + cards.length + '...';
+  }
+
+  var msg = added + ' hinzugefügt, ' + skipped + ' übersprungen' + (errors ? ', ' + errors + ' Fehler' : '');
+  if (statusEl) statusEl.textContent = (errors ? '⚠️ ' : '✅ ') + msg;
+  toast('AnkiConnect: ' + msg, errors ? 'err' : 'ok');
+}
+function renderPrompts(){
+  var el=document.getElementById('tab-prompts');
+  var phaseNames={1:'Phase 1',2:'Phase 2',3:'Phase 3'};
+  var html='<div class="card"><div class="card-title">🔒 System-Prompts</div>';
+  SYSTEM_PROMPTS.forEach(function(p){
+    html+='<div class="prompt-box">';
+    html+='<div class="prompt-box-header"><div>';
+    html+='<div class="prompt-title">'+esc(p.title)+'</div>';
+    html+='<div class="prompt-meta">'+(p.phase?phaseNames[p.phase]+' · ':'')+esc(SESSION_LABELS[p.sessionType]||p.sessionType)+'</div>';
+    html+='</div><button class="btn btn-ghost btn-sm" onclick="copyPromptText('+JSON.stringify(p.promptText)+')">📋 Kopieren</button></div>';
+    html+='<div class="prompt-text">'+esc(p.promptText)+'</div></div>';
+  });
+  html+='</div>';
+
+  html+='<div class="card"><div class="card-title">✏️ Eigene Prompts<div class="ct-actions"><button class="btn btn-amber btn-sm" onclick="openModalPrompt()">+ Prompt</button></div></div>';
+  if(!S.prompts.length){
+    html+='<div class="empty"><div class="empty-icon">💬</div>Noch keine eigenen Prompts.</div>';
+  }else{
+    S.prompts.forEach(function(p){
+      html+='<div class="prompt-box">';
+      html+='<div class="prompt-box-header"><div>';
+      html+='<div class="prompt-title">'+esc(p.title)+'</div>';
+      html+='<div class="prompt-meta">'+esc(SESSION_LABELS[p.sessionType]||p.sessionType)+'</div>';
+      html+='</div><div style="display:flex;gap:5px">';
+      html+='<button class="btn btn-ghost btn-sm" onclick="copyPromptText('+JSON.stringify(p.promptText)+')">📋</button>';
+      html+='<button class="btn btn-ghost btn-sm" onclick="openModalPrompt(\''+p.id+'\')">✏️</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deletePrompt(\''+p.id+'\')">🗑</button>';
+      html+='</div></div><div class="prompt-text">'+esc(p.promptText)+'</div></div>';
+    });
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function copyPromptText(text){
+  navigator.clipboard.writeText(text).then(function(){toast('Prompt kopiert','ok')});
+}
+function openModalPrompt(id){
+  _editingId=id||null;
+  if(id){
+    var p=S.prompts.find(function(x){return x.id===id});if(!p)return;
+    document.getElementById('modalPromptTitle').textContent='Prompt bearbeiten';
+    document.getElementById('ppTitle').value=p.title;
+    document.getElementById('ppPhase').value=p.phase||'';
+    document.getElementById('ppSessionType').value=p.sessionType;
+    document.getElementById('ppText').value=p.promptText;
+  }else{
+    document.getElementById('modalPromptTitle').textContent='Neuer Prompt';
+    ['ppTitle','ppText'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('ppPhase').value='';
+    document.getElementById('ppSessionType').value='custom';
+  }
+  openModal('modalPrompt');
+}
+function savePrompt(){
+  var title=document.getElementById('ppTitle').value.trim();
+  var text=document.getElementById('ppText').value.trim();
+  if(!title||!text){toast('Titel und Text erforderlich','err');return}
+  var obj={id:_editingId||uid(),title:title,phase:document.getElementById('ppPhase').value||null,type:'custom',
+    sessionType:document.getElementById('ppSessionType').value,promptText:text,variables:[],createdAt:new Date().toISOString()};
+  if(_editingId){var idx=S.prompts.findIndex(function(x){return x.id===_editingId});if(idx>=0)S.prompts[idx]=obj}
+  else S.prompts.push(obj);
+  save();closeModal('modalPrompt');renderPrompts();toast('Prompt gespeichert','ok');
+}
+function deletePrompt(id){
+  if(!confirm('Prompt löschen?')) return;
+  S.prompts=S.prompts.filter(function(x){return x.id!==id});
+  save();renderPrompts();
+}
+
+// ═══════════════════════════════════════════════
+// EINSTELLUNGEN TAB
+// ═══════════════════════════════════════════════
+function renderEinstellungen(){
+  var el=document.getElementById('tab-einstellungen');
+  var tokenOk=!!localStorage.getItem(GIST_TOKEN_KEY);
+  var idOk=!!localStorage.getItem(GIST_ID_KEY);
+  var html='<div class="card"><div class="card-title">⚙️ Allgemein</div>';
+  html+='<div class="form-row"><label>Tag-Namespace (Anki-Export)</label>';
+  html+='<input type="text" id="cfgNS" value="'+esc(S.config.tagNamespace)+'" placeholder="AP1"></div>';
+  html+='<div class="form-row"><label>Anki Root-Deck</label>';
+  html+='<input type="text" id="cfgAnkiDeck" value="'+esc(S.config.ankiRootDeck||'Longform')+'" placeholder="Longform">';
+  html+='<div class="form-hint">Deck-Hierarchie: [Root]::Quelltitel::Abschnittstitel</div></div>';
+  html+='<button class="btn btn-amber" onclick="saveConfig()">Speichern</button></div>';
+
+  html+='<div class="card"><div class="card-title">☁️ GitHub Gist Sync</div>';
+  html+=(tokenOk&&idOk?'<div class="notice notice-ok">✅ Gist konfiguriert.</div>':'<div class="notice notice-warn">⚠️ Gist noch nicht eingerichtet.</div>');
+  html+='<div class="form-row"><label>GitHub Token</label><input type="password" id="cfgToken" value="'+(localStorage.getItem(GIST_TOKEN_KEY)||'')+'" placeholder="ghp_..."></div>';
+  html+='<div class="form-row"><label>Gist ID</label><input type="text" id="cfgGistId" value="'+(localStorage.getItem(GIST_ID_KEY)||'')+'" placeholder="Gist-ID"></div>';
+  html+='<div class="form-hint" style="margin-bottom:10px">Token wird nur lokal gespeichert, nie exportiert.</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn btn-amber" onclick="saveGistConfig()">Speichern</button>';
+  html+='<button class="btn btn-ghost" onclick="gistPush()">⬆ Push</button>';
+  html+='<button class="btn btn-ghost" onclick="gistPull()">⬇ Pull</button>';
+  html+='</div></div>';
+
+  html+='<div class="card"><div class="card-title">📊 App-Info</div>';
+  html+='<div style="font-size:11px;font-family:var(--mono);color:var(--ink-mid);line-height:2">';
+  html+='Version: <strong>0.1</strong><br>';
+  html+='Quellen: <strong>'+S.sources.length+'</strong> · Abschnitte: <strong>'+S.sections.length+'</strong><br>';
+  html+='Projekte: <strong>'+S.projects.length+'</strong> · Sessions: <strong>'+S.sessions.length+'</strong><br>';
+  html+='Flashcards: <strong>'+S.cards.length+'</strong> · Prompts: <strong>'+S.prompts.length+'</strong><br>';
+  html+='Letzter Sync: <strong>'+(S._lastExported?new Date(S._lastExported).toLocaleString('de-DE'):'—')+'</strong>';
+  html+='</div><button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="confirmReset()">⚠️ Alle Daten löschen</button></div>';
+  el.innerHTML=html;
+}
+function saveConfig(){
+  S.config.tagNamespace=document.getElementById('cfgNS').value.trim()||'AP1';
+  S.config.ankiRootDeck=document.getElementById('cfgAnkiDeck').value.trim()||'Longform';
+  save();toast('Gespeichert','ok');
+}
+function saveGistConfig(){
+  var t=document.getElementById('cfgToken').value.trim();
+  var i=document.getElementById('cfgGistId').value.trim();
+  if(t) localStorage.setItem(GIST_TOKEN_KEY,t);
+  if(i) localStorage.setItem(GIST_ID_KEY,i);
+  toast('Gist-Konfiguration gespeichert','ok');renderEinstellungen();
+}
+function confirmReset(){
+  if(!confirm('ACHTUNG: Alle Daten werden gelöscht. Wirklich fortfahren?')) return;
+  if(!confirm('Wirklich ALLES löschen?')) return;
+  localStorage.removeItem(LKEY);
+  S={_lastExported:'',activeSourceId:null,sources:[],sections:[],projects:[],sessions:[],cards:[],prompts:[],config:{tagNamespace:'AP1'}};
+  save();renderTab(_activeTab);toast('Alle Daten gelöscht','err');
+}
+
+// ═══════════════════════════════════════════════
+// GIST SYNC
+// ═══════════════════════════════════════════════
+function gistHeaders(){return{'Authorization':'token '+localStorage.getItem(GIST_TOKEN_KEY),'Content-Type':'application/json'}}
+function setSyncStatus(state){
+  var dot=document.getElementById('syncDot');var lbl=document.getElementById('syncLabel');if(!dot)return;
+  dot.className='sync-dot';
+  if(state==='ok'){dot.classList.add('sync-ok');lbl.textContent='synced'}
+  if(state==='busy'){dot.classList.add('sync-busy');lbl.textContent='sync...'}
+  if(state==='err'){dot.classList.add('sync-err');lbl.textContent='fehler'}
+  if(state==='local'){dot.classList.add('sync-ok');lbl.textContent='lokal'}
+}
+function scheduleSyncPush(){
+  clearTimeout(_syncTimer);
+  if(!localStorage.getItem(GIST_TOKEN_KEY)||!localStorage.getItem(GIST_ID_KEY)) return;
+  _syncTimer=setTimeout(gistPush,30000);
+}
+function gistPush(){
+  var token=localStorage.getItem(GIST_TOKEN_KEY);var id=localStorage.getItem(GIST_ID_KEY);
+  if(!token||!id){toast('Gist nicht konfiguriert','err');return}
+  setSyncStatus('busy');
+  var payload={files:{}};payload.files[GIST_FILE]={content:JSON.stringify({version:1,exported:S._lastExported,state:S})};
+  fetch('https://api.github.com/gists/'+id,{method:'PATCH',headers:gistHeaders(),body:JSON.stringify(payload)})
+    .then(function(r){if(r.ok){setSyncStatus('ok');toast('Gist hochgeladen','ok')}else{setSyncStatus('err');toast('Gist-Fehler: '+r.status,'err')}})
+    .catch(function(){setSyncStatus('err');toast('Netzwerkfehler','err')});
+}
+function gistPull(){
+  var token=localStorage.getItem(GIST_TOKEN_KEY);var id=localStorage.getItem(GIST_ID_KEY);
+  if(!token||!id){toast('Gist nicht konfiguriert','err');return}
+  setSyncStatus('busy');
+  fetch('https://api.github.com/gists/'+id,{headers:gistHeaders()})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!data.files||!data.files[GIST_FILE]){toast('Keine Daten im Gist','err');setSyncStatus('err');return}
+      var content=JSON.parse(data.files[GIST_FILE].content);
+      var remote=content.state||content;
+      if(!remote.sources&&!remote.projects){toast('Ungültige Gist-Daten','err');setSyncStatus('err');return}
+      if(S._lastExported&&remote._lastExported&&remote._lastExported<S._lastExported){
+        if(!confirm('Lokale Daten sind neuer. Trotzdem überschreiben?')){setSyncStatus('local');return}
+      }
+      S=remote;save();renderTab(_activeTab);setSyncStatus('ok');toast('Gist geladen','ok');
+    })
+    .catch(function(){setSyncStatus('err');toast('Netzwerkfehler','err')});
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function esc(str){if(!str)return'';return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function shuffleArr(arr){for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t}return arr}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open')}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('open')}
+
+document.querySelectorAll('.modal-overlay').forEach(function(overlay){
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.classList.remove('open')});
+});
+
+function toast(msg,type){
+  var c=document.getElementById('toast');
+  var el=document.createElement('div');
+  el.className='toast-msg'+(type?' '+type:'');el.textContent=msg;c.appendChild(el);
+  requestAnimationFrame(function(){el.classList.add('show')});
+  setTimeout(function(){el.classList.remove('show');setTimeout(function(){if(c.contains(el))c.removeChild(el)},200)},2400);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+load();
+switchTab('quellen');
+updateRevBadge();
+setSyncStatus('local');
+</script>
+</body>
+</html>

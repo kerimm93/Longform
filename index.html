@@ -533,6 +533,14 @@ hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
       <label>Abschnitt (optional)</label>
       <select id="msSection"><option value="">— ganze Quelle —</option></select>
     </div>
+    <div class="form-row">
+      <label>Prompt-Vorlage</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="msPromptTemplate" style="flex:1" onchange="updateSessionPromptPreview()"><option value="">— Prompt wählen —</option></select>
+        <button class="btn btn-ghost" onclick="copySelectedSessionPrompt()">📋 Prompt kopieren</button>
+      </div>
+      <div class="prompt-text" id="msPromptPreview" style="max-height:110px;margin-top:8px;overflow:auto;opacity:.8">Keine Prompt-Vorlage gewählt.</div>
+    </div>
     <div class="form-row"><label>Verwendeter Prompt</label><input type="text" id="msPrompt" placeholder="Welcher Prompt wurde genutzt?"></div>
     <div class="form-row">
       <label>Raw Output (einfügen)</label>
@@ -1232,7 +1240,8 @@ function renderSessions(){
 function openModalSession(){
   _editingId=null;
   document.getElementById('modalSessionTitle').textContent='Neue Session';
-  document.getElementById('msType').value='audio_summary';
+  var typeSel=document.getElementById('msType');
+  typeSel.value='audio_summary';
   document.getElementById('msPrompt').value='';
   document.getElementById('msRaw').value='';
 
@@ -1250,7 +1259,77 @@ function openModalSession(){
       });
     }
   };
+  typeSel.onchange=populateSessionPromptTemplates;
+  populateSessionPromptTemplates();
   openModal('modalSession');
+}
+
+function getSessionPromptTemplates(sessionType){
+  var all=[];
+  SYSTEM_PROMPTS.forEach(function(p){
+    all.push({id:p.id, source:'system', title:p.title, sessionType:p.sessionType, promptText:p.promptText});
+  });
+  S.prompts.forEach(function(p){
+    all.push({id:p.id, source:'custom', title:p.title, sessionType:p.sessionType, promptText:p.promptText});
+  });
+  var matching=all.filter(function(p){return p.sessionType===sessionType});
+  var other=all.filter(function(p){return p.sessionType!==sessionType});
+  return {matching:matching, other:other};
+}
+
+function populateSessionPromptTemplates(){
+  var sel=document.getElementById('msPromptTemplate');
+  if(!sel) return;
+  var currentType=document.getElementById('msType').value;
+  var groups=getSessionPromptTemplates(currentType);
+  sel.innerHTML='<option value="">— Prompt wählen —</option>';
+  function addOption(p){
+    var opt=document.createElement('option');
+    opt.value=p.source+':'+p.id;
+    opt.textContent=(p.source==='system'?'System':'Eigen')+' · '+p.title;
+    sel.appendChild(opt);
+  }
+  groups.matching.forEach(addOption);
+  if(groups.matching.length&&groups.other.length){
+    var sep=document.createElement('option');
+    sep.disabled=true;
+    sep.textContent='— Weitere Prompts —';
+    sel.appendChild(sep);
+  }
+  groups.other.forEach(addOption);
+  updateSessionPromptPreview();
+}
+
+function getSessionPromptTemplateByValue(value){
+  if(!value) return null;
+  var parts=value.split(':');
+  var source=parts.shift();
+  var id=parts.join(':');
+  var list=source==='system'?SYSTEM_PROMPTS:S.prompts;
+  var p=list.find(function(x){return x.id===id});
+  if(!p) return null;
+  return {id:p.id, source:source, title:p.title, sessionType:p.sessionType, promptText:p.promptText};
+}
+
+function updateSessionPromptPreview(){
+  var sel=document.getElementById('msPromptTemplate');
+  var preview=document.getElementById('msPromptPreview');
+  if(!sel||!preview) return;
+  var p=getSessionPromptTemplateByValue(sel.value);
+  if(!p){
+    preview.textContent='Keine Prompt-Vorlage gewählt.';
+    return;
+  }
+  preview.textContent=p.promptText;
+  document.getElementById('msPrompt').value=p.title;
+}
+
+function copySelectedSessionPrompt(){
+  var sel=document.getElementById('msPromptTemplate');
+  var p=sel?getSessionPromptTemplateByValue(sel.value):null;
+  if(!p){toast('Keine Prompt-Vorlage gewählt','err');return}
+  document.getElementById('msPrompt').value=p.title;
+  copyTextToClipboard(p.promptText,'Prompt kopiert');
 }
 
 function saveSession(){
@@ -1847,7 +1926,7 @@ function renderPrompts(){
     html+='<div class="prompt-box-header"><div>';
     html+='<div class="prompt-title">'+esc(p.title)+'</div>';
     html+='<div class="prompt-meta">'+(p.phase?phaseNames[p.phase]+' · ':'')+esc(SESSION_LABELS[p.sessionType]||p.sessionType)+'</div>';
-    html+='</div><button class="btn btn-ghost btn-sm" onclick="copyPromptText('+JSON.stringify(p.promptText)+')">📋 Kopieren</button></div>';
+    html+='</div><button class="btn btn-ghost btn-sm" onclick="copySystemPrompt('+JSON.stringify(p.id)+')">📋 Kopieren</button></div>';
     html+='<div class="prompt-text">'+esc(p.promptText)+'</div></div>';
   });
   html+='</div>';
@@ -1862,9 +1941,9 @@ function renderPrompts(){
       html+='<div class="prompt-title">'+esc(p.title)+'</div>';
       html+='<div class="prompt-meta">'+esc(SESSION_LABELS[p.sessionType]||p.sessionType)+'</div>';
       html+='</div><div style="display:flex;gap:5px">';
-      html+='<button class="btn btn-ghost btn-sm" onclick="copyPromptText('+JSON.stringify(p.promptText)+')">📋</button>';
-      html+='<button class="btn btn-ghost btn-sm" onclick="openModalPrompt(\''+p.id+'\')">✏️</button>';
-      html+='<button class="btn btn-danger btn-sm" onclick="deletePrompt(\''+p.id+'\')">🗑</button>';
+      html+='<button class="btn btn-ghost btn-sm" onclick="copyCustomPrompt('+JSON.stringify(p.id)+')">📋</button>';
+      html+='<button class="btn btn-ghost btn-sm" onclick="openModalPrompt('+JSON.stringify(p.id)+')">✏️</button>';
+      html+='<button class="btn btn-danger btn-sm" onclick="deletePrompt('+JSON.stringify(p.id)+')">🗑</button>';
       html+='</div></div><div class="prompt-text">'+esc(p.promptText)+'</div></div>';
     });
   }
@@ -1872,9 +1951,44 @@ function renderPrompts(){
   el.innerHTML=html;
 }
 
-function copyPromptText(text){
-  navigator.clipboard.writeText(text).then(function(){toast('Prompt kopiert','ok')});
+function copyTextToClipboard(text,label){
+  var done=function(){toast(label||'Kopiert','ok')};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){fallbackCopyText(text,done)});
+  }else{
+    fallbackCopyText(text,done);
+  }
 }
+
+function fallbackCopyText(text,done){
+  var ta=document.createElement('textarea');
+  ta.value=text;
+  ta.setAttribute('readonly','');
+  ta.style.position='fixed';
+  ta.style.left='-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  done();
+}
+
+function copySystemPrompt(id){
+  var p=SYSTEM_PROMPTS.find(function(x){return x.id===id});
+  if(!p){toast('Prompt nicht gefunden','err');return}
+  copyTextToClipboard(p.promptText,'Prompt kopiert');
+}
+
+function copyCustomPrompt(id){
+  var p=S.prompts.find(function(x){return x.id===id});
+  if(!p){toast('Prompt nicht gefunden','err');return}
+  copyTextToClipboard(p.promptText,'Prompt kopiert');
+}
+
+function copyPromptText(text){
+  copyTextToClipboard(text,'Prompt kopiert');
+}
+
 function openModalPrompt(id){
   _editingId=id||null;
   if(id){

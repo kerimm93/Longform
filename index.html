@@ -618,6 +618,39 @@ hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
   </div>
 </div>
 
+<!-- FLASHCARD IMPORT MODAL -->
+<div class="modal-overlay" id="modalFlashcardImport">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <div class="modal-title">Flashcards importieren</div>
+      <button class="modal-close" onclick="closeModal('modalFlashcardImport')">✕</button>
+    </div>
+    <div class="notice notice-info">Kopiere den Flashcard-Prompt, lasse die KI JSON erzeugen und füge das Ergebnis hier ein.</div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label>Quelle (optional)</label>
+        <select id="fiSource" onchange="updateFlashcardImportSections()"><option value="">— keine —</option></select>
+      </div>
+      <div class="form-row">
+        <label>Abschnitt (optional)</label>
+        <select id="fiSection"><option value="">— ganze Quelle —</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <button class="btn btn-ghost" onclick="copyFlashcardImportPrompt()">📋 Flashcard-Prompt kopieren</button>
+    </div>
+    <div class="form-row">
+      <label>KI-JSON</label>
+      <textarea id="fiJson" rows="9" placeholder="KI-JSON hier einfügen..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost" onclick="previewFlashcardImport()">Vorschau prüfen</button>
+      <button class="btn btn-amber" id="fiImportBtn" onclick="confirmFlashcardImport()" disabled>Importieren</button>
+    </div>
+    <div id="fiPreview" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <!-- PROMPT MODAL -->
 <div class="modal-overlay" id="modalPrompt">
   <div class="modal">
@@ -707,6 +740,7 @@ var _reviewMode        = false;
 var _reviewQueue       = [];
 var _reviewIndex       = 0;
 var _reviewAnswered    = false;
+var _pendingFlashcardImport = [];
 
 // ═══════════════════════════════════════════════
 // SYSTEM PROMPTS
@@ -723,7 +757,7 @@ var SYSTEM_PROMPTS = [
   {id:'sys_p3_quiz', title:'Interleaved Quiz', phase:3, type:'system', sessionType:'quiz',
    promptText:'Erstelle ein Quiz mit 10 MC-Fragen.\nFormat:\n### Frage [N]\n[Frage]\nA) ...\nB) ...\nC) ...\nD) ...\nAm Ende: Antwort-Schlüssel + kurze Begründung.'},
   {id:'sys_p3_flash', title:'Flashcard-Generierung', phase:3, type:'system', sessionType:'flashcards',
-   promptText:'Generiere 10 Lernkarten.\nFormat:\n### Karte [N]\nF: [Frage oder Begriff]\nA: [Antwort / Definition]\nNur Wesentliches — präzise Definitionen.'},
+   promptText:'Generiere 10 Anki-kompatible Lernkarten für mein Memrise-Anki-Template.\n\nGib ausschließlich valides JSON zurück, keinen Markdown-Kommentar.\n\nFormat:\n[\n  {\n    "cardType": "mc",\n    "learnable": "Begriff oder Frage",\n    "definition": "richtige Antwort / Definition",\n    "choices": [\n      "richtige Antwort",\n      "plausible falsche Antwort 1",\n      "plausible falsche Antwort 2",\n      "plausible falsche Antwort 3"\n    ],\n    "extra": "kurze Erklärung, Kontext oder Beispiel",\n    "tags": []\n  },\n  {\n    "cardType": "cloze",\n    "clozeText": "Die {{c1::CPU}} führt Befehle aus und steuert zentrale Rechenoperationen.",\n    "choices": [\n      "CPU",\n      "RAM",\n      "SSD",\n      "GPU"\n    ],\n    "tags": []\n  }\n]\n\nRegeln:\n- `cardType` ist entweder "mc" oder "cloze".\n- Bei MC muss `choices[0]` exakt die richtige Antwort sein.\n- Bei MC müssen `choices[1]`, `choices[2]`, `choices[3]` falsche, aber plausible Antworten sein.\n- Bei MC muss `definition` identisch oder semantisch deckungsgleich mit `choices[0]` sein.\n- Bei Cloze muss `clozeText` die `{{c1::...}}`-Syntax enthalten.\n- Bei Cloze muss `choices[0]` die richtige Lösung aus der Cloze-Lücke sein.\n- `learnable`, `definition` und `extra` kurz und präzise halten.\n- Keine Trivialfragen.\n- Nur prüfbares Wissen.\n- Keine Markdown-Codeblöcke, nur JSON.'},
   {id:'sys_cleanup', title:'Bereinigungsprompt (NLM)', phase:null, type:'system', sessionType:'cleanup',
    promptText:'Du bekommst einen rohen NotebookLM-Output.\nRegeln:\n- Entferne Formatierungsfehler, doppelte Leerzeilen, abgeschnittene Sätze\n- Bewahre alle Informationen vollständig\n- Strukturiere in klare Abschnitte mit Markdown-Überschriften\n- Für Flashcards: "F: ... / A: ..."\n- Gib NUR den bereinigten Text zurück\n\n=== RAW OUTPUT ===\n[rawOutput einfügen]'},
   {id:'sys_pdf_clean', title:'PDF → Bereinigter Fließtext', phase:null, type:'system', sessionType:'pdf_cleanup',
@@ -1394,7 +1428,8 @@ function renderFlashcards(){
   var html='<div class="card">';
   html+='<div class="card-title">🃏 Flashcards<div class="ct-actions">';
   if(due.length) html+='<button class="btn btn-teal btn-sm" onclick="startReview()">▶ Review ('+due.length+')</button>';
-  html+='<button class="btn btn-amber btn-sm" onclick="openModalFlashcard()">+ Karte</button>';
+  html+='<button class="btn btn-amber btn-sm" onclick="openFlashcardImportModal()">📥 KI-Import</button>';
+  html+='<button class="btn btn-ghost btn-sm" onclick="openModalFlashcard()">+ Karte</button>';
   html+='</div></div>';
 
   if(due.length) html+='<div class="notice notice-warn">📅 '+due.length+' Karten fällig.</div>';
@@ -1582,6 +1617,135 @@ function deleteCard(id){
   if(!confirm('Karte löschen?')) return;
   S.cards=S.cards.filter(function(x){return x.id!==id});
   save();renderFlashcards();
+}
+
+function openFlashcardImportModal(){
+  _pendingFlashcardImport=[];
+  document.getElementById('fiJson').value='';
+  document.getElementById('fiPreview').innerHTML='';
+  var btn=document.getElementById('fiImportBtn');
+  if(btn) btn.disabled=true;
+  populateFlashcardImportSources();
+  openModal('modalFlashcardImport');
+}
+function populateFlashcardImportSources(){
+  var srcSel=document.getElementById('fiSource');
+  srcSel.innerHTML='<option value="">— keine —</option>';
+  S.sources.forEach(function(src){srcSel.innerHTML+='<option value="'+src.id+'">'+esc(src.title)+'</option>'});
+  updateFlashcardImportSections();
+}
+function updateFlashcardImportSections(){
+  var srcId=document.getElementById('fiSource').value;
+  var secSel=document.getElementById('fiSection');
+  secSel.innerHTML='<option value="">— ganze Quelle —</option>';
+  if(srcId){
+    S.sections.filter(function(s){return s.sourceId===srcId}).forEach(function(sec){
+      secSel.innerHTML+='<option value="'+sec.id+'">'+esc(sec.title)+'</option>';
+    });
+  }
+}
+function copyFlashcardImportPrompt(){
+  var p=SYSTEM_PROMPTS.find(function(x){return x.id==='sys_p3_flash'});
+  if(!p){toast('Flashcard-Prompt nicht gefunden','err');return}
+  if(typeof copyTextToClipboard==='function') copyTextToClipboard(p.promptText,'Flashcard-Prompt kopiert');
+  else if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(p.promptText).then(function(){toast('Flashcard-Prompt kopiert','ok')});
+}
+function extractJsonArrayFromText(text){
+  var raw=(text||'').trim();
+  if(!raw) throw new Error('Kein JSON eingefügt');
+  var fence=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if(fence) raw=fence[1].trim();
+  function parseArray(json){
+    var parsed=JSON.parse(json);
+    if(!Array.isArray(parsed)) throw new Error('JSON ist kein Array');
+    return parsed;
+  }
+  try{return parseArray(raw)}catch(firstErr){
+    var start=raw.indexOf('[');
+    if(start<0) throw new Error('Kein JSON-Array gefunden');
+    var depth=0,inStr=false,escNext=false;
+    for(var i=start;i<raw.length;i++){
+      var ch=raw.charAt(i);
+      if(inStr){
+        if(escNext) escNext=false;
+        else if(ch==='\\') escNext=true;
+        else if(ch==='"') inStr=false;
+      }else{
+        if(ch==='"') inStr=true;
+        else if(ch==='[') depth++;
+        else if(ch===']'){
+          depth--;
+          if(depth===0){
+            try{return parseArray(raw.slice(start,i+1))}
+            catch(e){throw new Error('Ungültiges JSON: '+e.message)}
+          }
+        }
+      }
+    }
+    if(firstErr.message==='JSON ist kein Array') throw firstErr;
+    throw new Error('Kein vollständiges JSON-Array gefunden');
+  }
+}
+function normalizeImportedFlashcard(item,sourceId,sectionId,now){
+  if(!item||typeof item!=='object') return null;
+  var type=item.cardType;
+  if(type!=='mc'&&type!=='cloze') return null;
+  var tags=Array.isArray(item.tags)?item.tags.map(function(t){return String(t).trim()}).filter(Boolean):[];
+  var choices=Array.isArray(item.choices)?item.choices.map(function(c){return String(c||'').trim()}):[];
+  while(choices.length<4) choices.push('');
+  choices=choices.slice(0,4);
+  if(type==='mc'){
+    var learnable=String(item.learnable||'').trim();
+    var definition=String(item.definition||choices[0]||'').trim();
+    if(!learnable||!definition) return null;
+    if(!choices[0]) choices[0]=definition;
+    return {id:uid(),sourceId:sourceId||null,sessionId:sectionId||null,cardType:'mc',learnable:learnable,definition:definition,choices:choices,extra:String(item.extra||'').trim(),tags:tags,reps:0,interval:1,efactor:2.5,nextReview:now,createdAt:now};
+  }
+  var clozeText=String(item.clozeText||'').trim();
+  if(!clozeText||clozeText.indexOf('{{c1::')<0) return null;
+  return {id:uid(),sourceId:sourceId||null,sessionId:sectionId||null,cardType:'cloze',clozeText:clozeText,learnable:clozeText,definition:choices[0]||'',choices:choices,tags:tags,reps:0,interval:1,efactor:2.5,nextReview:now,createdAt:now};
+}
+function previewFlashcardImport(){
+  var preview=document.getElementById('fiPreview');
+  var btn=document.getElementById('fiImportBtn');
+  _pendingFlashcardImport=[];
+  if(btn) btn.disabled=true;
+  try{
+    var arr=extractJsonArrayFromText(document.getElementById('fiJson').value);
+    var sourceId=document.getElementById('fiSource').value||null;
+    var sectionId=document.getElementById('fiSection').value||null;
+    var now=new Date().toISOString();
+    var skipped=0;
+    arr.forEach(function(item){
+      var card=normalizeImportedFlashcard(item,sourceId,sectionId,now);
+      if(card) _pendingFlashcardImport.push(card);
+      else skipped++;
+    });
+    var html='<div class="notice '+(_pendingFlashcardImport.length?'notice-ok':'notice-warn')+'">'+_pendingFlashcardImport.length+' gültige Karten · '+skipped+' übersprungen</div>';
+    if(_pendingFlashcardImport.length){
+      html+='<div style="display:grid;gap:6px">';
+      _pendingFlashcardImport.slice(0,5).forEach(function(c){
+        html+='<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px">';
+        html+='<span class="pill" style="margin-right:6px">'+esc(c.cardType.toUpperCase())+'</span>'+esc(c.cardType==='cloze'?c.clozeText:c.learnable);
+        html+='</div>';
+      });
+      html+='</div>';
+      if(btn) btn.disabled=false;
+    }
+    preview.innerHTML=html;
+  }catch(e){
+    preview.innerHTML='<div class="notice notice-warn">'+esc(e.message)+'</div>';
+  }
+}
+function confirmFlashcardImport(){
+  if(!_pendingFlashcardImport.length){toast('Keine gültigen Karten zum Importieren','err');return}
+  var count=_pendingFlashcardImport.length;
+  S.cards=S.cards.concat(_pendingFlashcardImport);
+  _pendingFlashcardImport=[];
+  save();
+  closeModal('modalFlashcardImport');
+  renderFlashcards();
+  toast(count+' Karten importiert','ok');
 }
 
 // ═══════════════════════════════════════════════

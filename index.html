@@ -1957,16 +1957,24 @@ function ankiRequest(action, params) {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: action, version: 6, params: params || {}})
-  }).then(function(r){ return r.json(); });
+  }).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json().catch(function(){ throw new Error('Ungültige AnkiConnect-Antwort'); });
+  });
 }
 
 function ankiConnectTest() {
   var el = document.getElementById('ankiStatus');
   if (el) el.textContent = 'Verbinde...';
   ankiRequest('version').then(function(r){
-    if (el) el.textContent = '✅ AnkiConnect v' + r.result + ' verbunden';
+    if (r.error === null) {
+      if (el) el.textContent = '✅ AnkiConnect v' + r.result + ' verbunden';
+    } else {
+      if (el) el.textContent = '❌ AnkiConnect-Fehler: ' + r.error;
+    }
   }).catch(function(){
     if (el) el.textContent = '❌ Keine Verbindung — Anki geöffnet und AnkiConnect installiert?';
+    toast('AnkiConnect nicht erreichbar','err');
   });
 }
 
@@ -1997,10 +2005,19 @@ async function ankiConnectPush() {
   if (statusEl) statusEl.textContent = 'Verbinde...';
 
   // Test connection first
-  try { await ankiRequest('version'); }
+  try {
+    var test = await ankiRequest('version');
+    if (test.error) { if(statusEl) statusEl.textContent='❌ AnkiConnect-Fehler: ' + test.error; toast('AnkiConnect-Fehler','err'); return; }
+  }
   catch(e) { if(statusEl) statusEl.textContent='❌ Keine AnkiConnect-Verbindung'; toast('AnkiConnect nicht erreichbar','err'); return; }
 
-  var added = 0; var skipped = 0; var errors = 0;
+  var added = 0; var skipped = 0; var errors = 0; var errorSamples = [];
+  function addErrorSample(type, modelName, msg) {
+    if (errorSamples.length >= 3) return;
+    msg = String(msg || 'Unbekannter Fehler');
+    if (msg.length > 120) msg = msg.slice(0, 117) + '...';
+    errorSamples.push(type + ' · ' + modelName + ' · ' + msg);
+  }
 
   for (var i = 0; i < cards.length; i++) {
     var c = cards[i];
@@ -2069,15 +2086,25 @@ async function ankiConnectPush() {
     if (!note) continue;
 
     try {
+      var deckResult = await ankiRequest('createDeck', {deck: deckName});
+      if (deckResult.error) {
+        errors++;
+        addErrorSample(c.cardType, note.modelName, deckResult.error);
+        continue;
+      }
       var r = await ankiRequest('addNote', {note: note});
-      if (r.error) { skipped++; }
+      if (r.error) {
+        if (/duplicate/i.test(String(r.error))) skipped++;
+        else { errors++; addErrorSample(c.cardType, note.modelName, r.error); }
+      }
       else { added++; }
-    } catch(e) { errors++; }
+    } catch(e) { errors++; addErrorSample(c.cardType, note.modelName, e.message); }
 
     if (statusEl) statusEl.textContent = 'Sende ' + (i+1) + '/' + cards.length + '...';
   }
 
-  var msg = added + ' hinzugefügt, ' + skipped + ' übersprungen' + (errors ? ', ' + errors + ' Fehler' : '');
+  var msg = added + ' hinzugefügt, ' + skipped + ' übersprungen, ' + errors + ' Fehler';
+  if (errors && errorSamples.length) msg += ' · Beispiel: ' + errorSamples.join(' | ');
   if (statusEl) statusEl.textContent = (errors ? '⚠️ ' : '✅ ') + msg;
   toast('AnkiConnect: ' + msg, errors ? 'err' : 'ok');
 }

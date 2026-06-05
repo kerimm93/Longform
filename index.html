@@ -741,6 +741,7 @@ var _reviewQueue       = [];
 var _reviewIndex       = 0;
 var _reviewAnswered    = false;
 var _pendingFlashcardImport = [];
+var _sourcePromptPanelId = null;
 
 // ═══════════════════════════════════════════════
 // SYSTEM PROMPTS
@@ -884,6 +885,7 @@ function renderQuellen(){
       html+='</div></div>';
       html+='<div class="source-actions" onclick="event.stopPropagation()">';
       html+='<button class="btn btn-ghost btn-sm" onclick="openSectionModal(\''+src.id+'\')">⊞ Abschnitte</button>';
+      if(isExp) html+='<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toggleSourcePromptPanel(\''+src.id+'\')">📋 Prompt</button>';
       html+='<button class="btn btn-ghost btn-sm" onclick="openModalSource(\''+src.id+'\')">✏️</button>';
       html+='<button class="btn btn-danger btn-sm" onclick="deleteSource(\''+src.id+'\')">🗑</button>';
       html+='</div></div>';
@@ -893,6 +895,8 @@ function renderQuellen(){
       html+='<div class="prog-label"><span>Fortschritt</span><span>'+prog.pct+'%</span></div>';
       html+='<div class="prog-bar"><div class="prog-fill'+(prog.pct===100?' complete':'')+'" style="width:'+prog.pct+'%"></div></div>';
       html+='</div>';
+
+      if(isExp && _sourcePromptPanelId===src.id) html+=renderSourcePromptPanel(src);
 
       // Expanded sections
       if(isExp && sections.length){
@@ -939,6 +943,72 @@ function renderQuellen(){
 function toggleSourceExpand(id){
   _expandedSourceId=(_expandedSourceId===id)?null:id;
   renderQuellen();
+}
+
+function toggleSourcePromptPanel(sourceId){
+  _sourcePromptPanelId=(_sourcePromptPanelId===sourceId)?null:sourceId;
+  renderQuellen();
+}
+
+function getSourcePromptIds(src){
+  return [
+    'sys_p1_audio',
+    'sys_audio_20min',
+    'sys_audio_10min',
+    'sys_lese_15min',
+    'sys_p1_mindmap',
+    'sys_p2_qa',
+    'sys_p2_qa2',
+    'sys_p3_quiz',
+    'sys_p3_flash',
+    'sys_pdf_clean'
+  ];
+}
+
+function renderSourcePromptPanel(src){
+  var prompts=getSourcePromptIds(src).map(function(id){
+    return SYSTEM_PROMPTS.find(function(p){return p.id===id});
+  }).filter(Boolean);
+  var html='<div class="prompt-box" style="margin:10px 16px 12px" onclick="event.stopPropagation()">';
+  html+='<div class="prompt-box-header"><div>';
+  html+='<div class="prompt-title">Prompts für diese Quelle</div>';
+  html+='<div class="prompt-meta">Kopiert Prompt inklusive Quellenkontext.</div>';
+  html+='</div></div>';
+  if(!prompts.length){
+    html+='<div class="notice">Keine passenden System-Prompts gefunden.</div>';
+  }else{
+    html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    prompts.forEach(function(prompt){
+      var meta=SESSION_LABELS[prompt.sessionType]||prompt.sessionType||'System';
+      html+='<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copySourcePrompt('+JSON.stringify(src.id)+','+JSON.stringify(prompt.id)+')">📋 '+esc(prompt.title)+' · '+esc(meta)+'</button>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+function copySourcePrompt(sourceId,promptId){
+  var src=S.sources.find(function(x){return x.id===sourceId});
+  var prompt=SYSTEM_PROMPTS.find(function(x){return x.id===promptId});
+  if(!src||!prompt){toast('Prompt nicht gefunden','err');return}
+  var sections=S.sections.filter(function(s){return s.sourceId===sourceId}).slice(0,30);
+  var text='QUELLE:\n';
+  text+='Titel: '+(src.title||'')+'\n';
+  text+='Autor/Kanal: '+(src.author||'')+'\n';
+  text+='Typ: '+(TYPE_LABELS[src.type]||src.type||'')+'\n';
+  if(sections.length){
+    text+='\nABSCHNITTE:\n';
+    sections.forEach(function(section){
+      text+='- '+(section.title||'')+' — '+(section.range||'')+'\n';
+    });
+  }
+  text+='\nPROMPT:\n'+prompt.promptText;
+  if(typeof copyTextToClipboard==='function'){
+    copyTextToClipboard(text,'Prompt kopiert');
+  }else if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){toast('Prompt kopiert','ok')});
+  }
 }
 
 function toggleStep(sectionId,stepId){
